@@ -1,7 +1,8 @@
 # ADR 0002 — Pivote a stack local (Ollama + qwen3:30b + bge-m3 + cognee 1.0 + kuzu)
 
-- **Estado:** Accepted
+- **Estado:** Superseded en parte (LLM/embeddings) por [ADR 0003](0003-re-pivote-gemini-por-bloqueo-r2.md) — la decisión de **Kuzu como graph backend (sec. 5)** sigue vigente.
 - **Fecha:** 2026-05-02
+- **Fecha de superseding parcial:** 2026-05-02 (mismo día — Cloudflare R2 inaccesible imposibilitó descargar modelos Ollama)
 - **Decisor:** Daniel Alonso Gómez (delegación explícita en mensaje de 17:46 — *"realiza la implementación completa, instalando un modelo local, el que tú me habías recomendado, implementando absolutamente todo"*)
 - **Redactor:** sesión Claude Code (Opus 4.7)
 - **Reemplaza:** ADR 0001 (LLM Gemini en Fase 0) — pasa a `Superseded`

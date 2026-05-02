@@ -1,9 +1,9 @@
 # ADR 0001 — Sustituir el LLM local de Fase 0 por Gemini
 
-- **Estado:** Superseded by [ADR 0002](0002-pivote-stack-local-cognee-1-sin-networkx.md)
+- **Estado:** Active (parcial — reactivado por ADR 0003 en lo concerniente a LLM y embeddings; ADR 0002 sigue vigente en lo concerniente a Kuzu como graph backend)
 - **Fecha propuesta:** 2026-05-02
 - **Fecha aceptada:** 2026-05-02
-- **Fecha superada:** 2026-05-02 (mismo día — Cognee 1.0 sin networkx hizo inviable el stack Gemini sin pivote arquitectónico mayor)
+- **Historia de status:** Accepted (mañana 2026-05-02) → Superseded (tarde 2026-05-02 por ADR 0002) → Active parcial (noche 2026-05-02 por ADR 0003, tras blocker de red R2)
 - **Decisor:** Daniel Alonso Gómez (`daniel@dalonsogomez.com`)
 - **Redactor:** sesión Claude Code (Opus 4.7), bajo brainstorming Superpowers
 - **Modifica:** `AGENTS.md` sec. 3 (stack canónico) y sec. 13.2 (`.env` de cognee-mcp)

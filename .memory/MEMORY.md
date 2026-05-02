@@ -4,8 +4,9 @@
 
 ## Decisiones (ADRs)
 
-- [ADR 0001 — LLM Gemini en Fase 0](decisions/0001-llm-gemini-en-fase-0.md) — Status: **Superseded** by ADR 0002 (2026-05-02). Cognee 1.0 sin networkx forzó pivote.
-- [ADR 0002 — Pivote a stack local + Kuzu](decisions/0002-pivote-stack-local-cognee-1-sin-networkx.md) — Stack actual: Ollama + qwen3:30b + bge-m3 + Kuzu (excepción a sec. 12). Status: Accepted (2026-05-02, delegación explícita del usuario).
+- [ADR 0001 — LLM Gemini en Fase 0](decisions/0001-llm-gemini-en-fase-0.md) — Status: **Active parcial** (LLM/embeddings reactivados por ADR 0003).
+- [ADR 0002 — Pivote a stack local + Kuzu](decisions/0002-pivote-stack-local-cognee-1-sin-networkx.md) — Status: **Superseded en parte** por ADR 0003 (la decisión sobre Kuzu sigue vigente; la de Ollama no por bloqueo de red R2).
+- [ADR 0003 — Re-pivote a Gemini por bloqueo R2](decisions/0003-re-pivote-gemini-por-bloqueo-r2.md) — Stack actual: Cognee 1.0 + Gemini 3 Flash + gemini-embedding-001 + Kuzu + LanceDB. Status: **Active** (2026-05-02).
 
 ## Planes activos
 

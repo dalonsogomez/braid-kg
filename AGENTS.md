@@ -46,9 +46,10 @@ Estas siete decisiones están firmes. El resto se deriva de ellas.
 | Engine de KG/RAG | **Cognee** (`cognify`, `codify`, `search`, `prune`) | LlamaIndex PropertyGraphIndex si Cognee impone fricción no compensada | Activo |
 | Graph backend | **Kuzu** embedded (excepción provisional documentada en ADR 0002 sec. 5; Cognee 1.0 eliminó networkx) | networkx si Cognee lo reintroduce; ArcadeDB Embedded cuando aplique síntoma 11.1 | Activo |
 | Vector store | **LanceDB embebida** (Rust + Arrow, ARM64 nativo, default Cognee) | Qdrant local cuando aplique síntoma 11.2 | Activo |
-| LLM local | **Ollama + `qwen3:30b`** (mejor aproximación a `qwen3.5:35b-a3b` del AGENTS.md original; ese modelo no existe en Ollama hoy 2026-05-02) — ver ADR 0002 | `qwen3:32b` (dense) si síntoma de calidad lo justifica; `mlx-lm` directo si Ollama falla | Activo (Fase 0/1) |
-| LLM cloud | **Claude Sonnet 4.6** vía API | — | Reservado para wikis públicos y extracción crítica si la calidad local no basta (medido en `wikiforge eval` — Fase 2) |
-| Embeddings | **Ollama + `bge-m3`** (~570 MB, multilingüe sólido) — ver ADR 0002 | `qwen3-embedding-8b` cuando aplique síntoma 11.3 | Activo |
+| LLM principal | **Gemini API — `gemini-3-flash-preview`** — ver ADR 0003 (re-pivote forzoso por bloqueo de Cloudflare R2 que impide descargar modelos Ollama) | Reversión a Ollama+qwen cuando R2 vuelva accesible (ADR 0004 futuro) | Activo (Fase 0/1) |
+| LLM extracción crítica | **Gemini API — `gemini-3.1-pro-preview`** | — | Activo, uso bajo demanda |
+| LLM cloud secundario | **Claude Sonnet 4.6** vía API | — | Reservado para wikis públicos y casos donde Gemini no aplique |
+| Embeddings | **Gemini `gemini-embedding-001`** (3072 dims, multilingüe) — ver ADR 0003 | `bge-m3` vía Ollama cuando R2 vuelva | Activo |
 | Reranker | **No instalado en Día 1** | qwen3-reranker-4b o bge-reranker-v2-m3 cuando aplique síntoma 11.4 | Diferido |
 | Ingesta de código | **tree-sitter vía `cognee.run_code_graph_pipeline`** (Python sólido) | `kg_extractors` custom para C#/Java/PHP mientras esté abierto issue Cognee #1502 | Activo |
 | Ingesta de PDFs/docs | **Docling local** (Apache 2.0, ARM64) | — | Activo (solo si el repo tiene PDFs relevantes) |
@@ -66,7 +67,7 @@ Estas siete decisiones están firmes. El resto se deriva de ellas.
 - **PostgreSQL + JSONB + pgvector como capa canónica del Día 1** — propuesta del Flujo 2 original; correcta para empresa, excesiva para un solo desarrollador con foco en CLI.
 - **Microsoft GraphRAG** — reservado solo para corpus enormes (>500 páginas) con queries globales y presupuesto cloud. No aplica al caso. LightRAG se descarta también por ausencia de MCP server oficial.
 - **Langfuse en Día 1** — overhead injustificado hasta tener métricas concretas de regresión.
-- **Gemini API como LLM principal** — propuesto y descartado por ADR 0002 (que reemplaza a ADR 0001). Cognee 1.0 eliminó networkx y eso, sumado a la delegación del usuario "implementa con modelo local", forzó pivote a Ollama. ADR 0001 queda como `Superseded`.
+- **Ollama + qwen local** — intentado bajo ADR 0002 pero bloqueado por inaccesibilidad de Cloudflare R2 (donde Ollama hosta los blobs) desde esta red. ADR 0003 re-pivota a Gemini cloud temporalmente; el stack local volverá cuando R2 sea accesible o se adopte ruta HF+mlx-lm.
 - **MiniMax M2.x para Cognee** — descartado en ADR 0001 sec. 2.2.bis (ADR ahora `Superseded`, pero el descarte sigue vigente por las mismas razones técnicas: no es first-class en Cognee, Code Subscription da acceso a M2.1 no al flagship M2.7, quota rolling 5 h colapsa en indexación batch).
 
 ---
@@ -320,24 +321,21 @@ promotion_policy = "explicit_only"
 ### 13.2. `.env` para `cognee-mcp` (raíz de la instalación de cognee-mcp)
 
 ```env
-LLM_PROVIDER=ollama
-LLM_MODEL=qwen3:30b
-LLM_ENDPOINT=http://localhost:11434/v1
-LLM_API_KEY=ollama
-EMBEDDING_PROVIDER=ollama
-EMBEDDING_MODEL=bge-m3
-EMBEDDING_ENDPOINT=http://localhost:11434/v1
-EMBEDDING_API_KEY=ollama
-EMBEDDING_DIMENSIONS=1024
+# Stack actual: ADR 0003 (Gemini + kuzu)
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini/gemini-3-flash-preview
+EMBEDDING_PROVIDER=gemini
+EMBEDDING_MODEL=gemini/gemini-embedding-001
+EMBEDDING_DIMENSIONS=3072
 GRAPH_DATABASE_PROVIDER=kuzu
 VECTOR_DB_PROVIDER=lancedb
 ENABLE_BACKEND_ACCESS_CONTROL=false
+# LLM_API_KEY (= GEMINI_API_KEY) inyectada en runtime desde ~/.config/wikiforge/secrets.env vía shim
 ```
 
 **Gestión de secretos (heredada del ADR 0001 sec. 2.4, sigue vigente):**
 
 - API keys de cualquier provider cloud (Gemini, MiniMax, Anthropic, etc.) viven **fuera del repo** en `~/.config/wikiforge/secrets.env` con permisos `600`.
-- En el stack actual (Ollama local), `LLM_API_KEY` es el placeholder `ollama` (no es un secreto real).
 - Prohibido escribir cualquier API key real en `.env` del repo, en ADRs, en planes, en commits, o en cualquier archivo bajo control de versiones.
 
 ### 13.3. Plantilla `AGENTS.md` por proyecto (la específica de cada repo, no esta canónica)
