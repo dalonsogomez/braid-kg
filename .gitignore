@@ -28,6 +28,9 @@ venv/
 .vscode/
 *.swp
 
+# Claude Code local state (settings, locks)
+.claude/
+
 # Logs
 *.log
 logs/
