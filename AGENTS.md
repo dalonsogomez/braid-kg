@@ -1,0 +1,391 @@
+# WikiForge — Project Instructions
+
+> **Cómo usar este documento.** Este es el archivo canónico de instrucciones del proyecto WikiForge. Vive simultáneamente como (i) `AGENTS.md` en la raíz del repositorio, (ii) Project Instructions en Claude.ai, y (iii) referencia técnica de las decisiones tomadas. Todo lo que contradiga este documento es obsoleto. Lo que no esté aquí, no es decisión del proyecto.
+>
+> Las modificaciones a este archivo se hacen vía pull request con un ADR asociado en `.memory/decisions/`.
+
+---
+
+## 1. Misión y prioridades
+
+WikiForge es un sistema **MCP-first** que da a las herramientas de desarrollo asistido (Claude Code, Codex CLI, Cursor, Cline, Aider, Goose) **memoria persistente y contexto estructurado por proyecto**, de forma que respondan con grounding real al código, las decisiones y la documentación del repositorio activo en lugar de inventar.
+
+Las prioridades son ordenadas y no se negocian:
+
+- **Prioridad A — Calidad en CLI/IDE.** Que un agente trabajando dentro de un proyecto responda preguntas concretas sobre ese código sin alucinar nombres, sin pedir abrir archivos manualmente, y respetando decisiones técnicas previas. Métrica única: **% de respuestas correctas sin necesidad de reformular ni aportar archivos a mano**.
+- **Prioridad B — Generación de wikis publicables.** Wikis personales offline navegables y, opcionalmente, un wiki público de portfolio. Subordinada a A.
+- **Prioridad C — Que ambas brillen.** Si dos componentes empatan en A, gana el que también ayude a B.
+
+**No-objetivos explícitos:**
+
+- No es un producto SaaS, no es un servidor multi-tenant, no es una plataforma de equipo.
+- No optimiza coste de tokens; optimiza calidad y grounding.
+- No reemplaza a Claude Code/Codex CLI/Cursor; los **alimenta** vía MCP.
+- No persigue benchmarks de hype (GraphRAG global, ColBERT) si la medida directa de A no lo justifica.
+
+---
+
+## 2. Decisiones arquitectónicas fundamentales
+
+Estas siete decisiones están firmes. El resto se deriva de ellas.
+
+1. **MCP-first como protocolo único de consumo.** Todo lo que un IDE necesita se expone como herramienta MCP. No hay APIs custom por IDE, no hay plugins específicos. Añadir un editor compatible MCP es una entrada en su config; nada más.
+2. **Engine preferente, no dogma.** Cognee es el engine elegido por su MCP server oficial maduro y su pipeline ECL declarativo, pero la arquitectura está diseñada para que pueda sustituirse por LlamaIndex PropertyGraphIndex (o una implementación propia) **sin rediseñar nada por encima**. Cognee acelera; no es la base de la arquitectura.
+3. **Contexto resuelto por directorio.** El proyecto activo siempre tiene prioridad sobre cualquier contexto global. Resolución estricta: `cwd → git root → .kgconfig → ~/.wikiforge/profile/` como fallback final. Nunca se mezclan niveles por defecto.
+4. **Memoria explícita en tres niveles.** Sesión (volátil), proyecto (persistente vinculada a la raíz Git), global personal (fallback cross-proyectos). Cada nivel tiene un dataset distinto y un store separado.
+5. **Promoción exclusivamente manual.** No existe auto-promote en ninguna dirección. La memoria solo asciende de nivel cuando el usuario lo decide con un comando explícito. Esta es **la regla de oro**: cualquier auto-promotion futura contamina los niveles superiores y degrada la calidad.
+6. **AGENTS.md como contrato único.** Un solo archivo gobierna las instrucciones para todos los IDEs. `CLAUDE.md`, `.github/copilot-instructions.md` y `.cursor/rules/main.mdc` son symlinks al `AGENTS.md`. Cuando Claude Code soporte AGENTS.md de forma nativa (issue Anthropic #6235), se eliminará el symlink correspondiente.
+7. **Migraciones por síntomas observables, nunca por anticipación.** No se introduce ArcadeDB, Qdrant, Graphiti, Langfuse ni Microsoft GraphRAG hasta que una métrica concreta —no una intuición— lo justifique. Cada migración tiene un síntoma de entrada documentado en este archivo.
+
+---
+
+## 3. Stack canónico
+
+| Componente | Elección actual (Fase 0/1) | Migración prevista | Estado |
+|---|---|---|---|
+| Engine de KG/RAG | **Cognee** (`cognify`, `codify`, `search`, `prune`) | LlamaIndex PropertyGraphIndex si Cognee impone fricción no compensada | Activo |
+| Graph backend | **Default Cognee — networkx + SQLite** (in-process) | ArcadeDB Embedded (`arcadedb-embedded` PyPI, wheel `macosx_11_0_arm64`) cuando aplique síntoma 11.1 | Activo |
+| Vector store | **LanceDB embebida** (Rust + Arrow, ARM64 nativo, default Cognee) | Qdrant local cuando aplique síntoma 11.2 | Activo |
+| LLM principal | **Gemini API — `gemini-3-flash-preview`** (versión fija, sin aliases `-latest`) — ver ADR 0001 | Reversión a Ollama+qwen3.5 cuando aplique síntoma 11.8 / 11.9 / 11.10. Claude Sonnet 4.6 sigue disponible para wikis públicos y casos donde Gemini no encaje. | Activo (Fase 0/1) |
+| LLM extracción crítica | **Gemini API — `gemini-3.1-pro-preview`** | — | Activo, uso bajo demanda |
+| LLM cloud secundario | **Claude Sonnet 4.6** vía API | — | Reservado para wikis públicos y casos donde Gemini no aplique |
+| Embeddings | **Gemini `gemini-embedding-001`** (3072 dims, multilingüe) — ver ADR 0001 | qwen3-embedding-8b o bge-m3 local cuando aplique síntoma 11.3 inverso (Gemini falle en multilingüe código-español) | Activo |
+| Reranker | **No instalado en Día 1** | qwen3-reranker-4b o bge-reranker-v2-m3 cuando aplique síntoma 11.4 | Diferido |
+| Ingesta de código | **tree-sitter vía `cognee.run_code_graph_pipeline`** (Python sólido) | `kg_extractors` custom para C#/Java/PHP mientras esté abierto issue Cognee #1502 | Activo |
+| Ingesta de PDFs/docs | **Docling local** (Apache 2.0, ARM64) | — | Activo (solo si el repo tiene PDFs relevantes) |
+| Ingesta web | Diferido a Mes 2-3: **Crawl4AI** | — | Diferido |
+| Memoria episódica temporal | Diferido: **Graphiti MCP** sobre FalkorDB | — | Diferido — ver síntoma 11.5 |
+| Wiki personal offline | Diferido a Mes 2: **Astro Starlight** + plantillas Jinja2 | — | Diferido (Prioridad B) |
+| Wiki público portfolio | Diferido a Mes 2: **DeepWiki-Open** apuntado al repo público | — | Diferido (Prioridad B) |
+| Contrato cross-tool | **AGENTS.md** + symlinks a CLAUDE.md / copilot-instructions.md / .cursor/rules/main.mdc | Eliminar symlink CLAUDE.md cuando issue #6235 se cierre | Activo |
+| Observabilidad | **Logs JSON estructurados a stdout** | DeepEval ad-hoc (Mes 2), Langfuse self-hosted solo si aplica síntoma 11.6 | Activo |
+
+**Descartados con razón documentada:**
+
+- **Kuzu** — repositorio archivado el 10/10/2025 tras adquisición Apple. No iniciar nada nuevo sobre Kuzu. Si un provider en Cognee aún lo lista, migrar antes de que rompa.
+- **Neo4j Community como graph backend del Día 1** — overkill, JVM consume RAM que se necesita para los modelos MLX, no aporta nada que ArcadeDB no cubra cuando llegue el momento.
+- **PostgreSQL + JSONB + pgvector como capa canónica del Día 1** — propuesta del Flujo 2 original; correcta para empresa, excesiva para un solo desarrollador con foco en CLI.
+- **Microsoft GraphRAG** — reservado solo para corpus enormes (>500 páginas) con queries globales y presupuesto cloud. No aplica al caso. LightRAG se descarta también por ausencia de MCP server oficial.
+- **Langfuse en Día 1** — overhead injustificado hasta tener métricas concretas de regresión.
+- **Ollama + `qwen3.5:35b-a3b` en Día 1** — diferido por ADR 0001. La estabilidad de Ollama 0.19 + MLX en preview a marzo 2026 y el peso del modelo (~22 GB) justifican operar en cloud Gemini hasta que un síntoma de la sec. 11 (11.8 / 11.9 / 11.10) fuerce la reversión. Reactivable con un commit.
+- **MiniMax M2.x para Cognee** — descartado en ADR 0001 por: (a) no es first-class en Cognee, (b) la Code Subscription da acceso a M2.1 (no al flagship M2.7), (c) quota rolling 5 h colapsa en indexación batch, (d) SWE-bench inferior a Gemini 3 Flash. MiniMax sigue disponible como modelo de chat dentro de Claude Code/Cursor vía Coding Plan, no como provider de Cognee.
+
+---
+
+## 4. Modelo de memoria de tres niveles
+
+### 4.1. Definición de cada nivel
+
+**Nivel 0 — Temporal de sesión.** Vida: una sesión de Claude Code/Codex/Cursor. Contiene estado activo (archivos abiertos, top-k chunks recuperados, plan en curso, hipótesis de depuración). Vive en el proceso de Cognee con `session_id` auto-generado. **Nunca persiste a disco a menos que el usuario lo promueva con un comando explícito.**
+
+**Nivel 1 — Persistente de proyecto.** Vida: hasta `git rm`. Contiene convenciones del repo, ADRs, glosario de dominio, resúmenes estructurales, decisiones técnicas. Vinculada a la raíz Git del proyecto. Cognee `dataset_id = <project_slug>`. Vive en `.kg/` (grafo + metadata), `.rag/` (vectores), y `.memory/*.md` (capa humana editable y auditable).
+
+**Nivel 2 — Persistente personal/global.** Vida: cross-proyectos. Contiene preferencias estables del usuario que aplican a cualquier repositorio: estilo de código, librerías preferidas, idioma de comentarios, patrones que rechaza. Cognee `dataset_id = "_global_profile"`. Vive en `~/.wikiforge/profile/`. **Solo se consulta como fallback** cuando la búsqueda local devuelve score por debajo del umbral.
+
+### 4.2. Reglas de promoción (no negociables)
+
+1. **No existe promoción automática en ninguna dirección.** Bajo ninguna circunstancia.
+2. La promoción sesión → proyecto requiere `wikiforge promote-decision "<texto>"`.
+3. La promoción proyecto → global requiere `wikiforge promote-to-global "<texto>"`.
+4. El descenso de nivel se hace con `wikiforge demote --id <decision_id>`.
+5. Una decisión solo se promueve si cumple alguno de estos criterios:
+   - Aparece repetidamente en varias sesiones del mismo proyecto.
+   - Afecta a varios módulos o archivos.
+   - Es una decisión arquitectónica con impacto funcional estable.
+   - Fue validada por edición real del repositorio (commit) o evidencia repetida.
+6. La promoción a global requiere además que la regla **aplique a múltiples proyectos**, no solo al actual.
+
+### 4.3. Resolución de contexto (orden estricto)
+
+Cada llamada del agente a `mcp__cognee__search` (o equivalente) pasa por este algoritmo:
+
+1. **`cwd`** → buscar `.kg/` ascendiendo hasta la primera raíz Git.
+2. **Raíz Git** → si no se halló `.kg/` heredado, usar la raíz Git como ámbito.
+3. **`.kgconfig`** → si existe, su `dataset_id` y `priority` ganan sobre lo deducido.
+4. **`~/.wikiforge/profile/`** → solo se consulta si los pasos 1-3 devuelven un top-k con score por debajo del umbral configurado (default `0.55`).
+
+Esto se implementa en un wrapper MCP custom de ~150 líneas que intercepta la llamada a Cognee y decide qué `dataset_id` consultar. Es el cerebro del sistema; sin él no hay tres niveles, hay un solo cajón global contaminado.
+
+---
+
+## 5. Esquema de Knowledge Graph: mínimo útil
+
+### 5.1. Regla rectora
+
+**Solo se modela lo que mejora retrieval y grounding en preguntas reales de desarrollo.** Cualquier nodo o relación que no haya demostrado mejorar respuestas concretas se rechaza. Más semántica antes de validar la base equivale a más complejidad sin más valor.
+
+### 5.2. Nodos del grafo inicial
+
+| Tipo | Descripción | Obligatorio |
+|---|---|---|
+| `File` | Archivo del repositorio. Metadata: `path`, `language`, `lines`, `last_modified` | Sí |
+| `Symbol` | Función, clase, método, módulo. Metadata: `kind`, `name`, `file_path`, `start_line`, `end_line`, `signature` | Sí |
+| `DocChunk` | Fragmento de documentación (README, docstring, ADR). Metadata: `source`, `heading_path`, `text` | Sí |
+| `Concept` | Solo si una entidad de dominio aparece repetida y mejora retrieval | Opcional, validar antes de añadir |
+
+### 5.3. Relaciones del grafo inicial
+
+| Tipo | Origen → Destino | Descripción |
+|---|---|---|
+| `CONTAINS` | `File` → `Symbol`, `File` → `DocChunk` | Pertenencia estructural |
+| `CALLS` | `Symbol` → `Symbol` | Llamada explícita en el código |
+| `IMPORTS` | `File` → `File` | Dependencia de imports |
+| `DOCUMENTS` | `DocChunk` → `Symbol` o `File` | La documentación describe ese símbolo |
+| `MENTIONS` | `DocChunk` → `Concept` | Aparición de un concepto de dominio |
+
+Esto es **suficiente** para responder con calidad: "qué hace esta función", "dónde se usa esto", "qué archivos toca este endpoint", "qué documentación describe este módulo". Cualquier ampliación del esquema se hace solo después de medir que las preguntas reales que falla el sistema requieren más estructura, y se documenta como ADR.
+
+---
+
+## 6. Estructura de directorios
+
+```
+~/.wikiforge/                        # NIVEL 2 — global personal
+  profile/
+    AGENTS.md                        # preferencias estables (fuente humana)
+    preferences.json                 # mismas preferencias estructuradas
+    cognee_data/                     # dataset_id = "_global_profile"
+  cache/
+  bin/                               # CLI: wikiforge
+
+mi-proyecto/                         # NIVEL 1 — proyecto
+  .git/
+  .kg/                               # grafo + metadata Cognee
+    cognee.db                        # SQLite metadata
+    networkx_graph.pkl               # grafo serializado
+    arcadedb_data/                   # solo cuando se migre
+  .rag/
+    lancedb/                         # vector store embebido
+  .memory/                           # capa humana editable
+    MEMORY.md                        # índice operacional
+    decisions/                       # ADRs en Markdown numerados
+    glossary.md                      # glosario de dominio
+    risks.md                         # riesgos abiertos
+  .kgconfig                          # TOML: dataset_id, embedder, umbrales
+  AGENTS.md                          # contrato único cross-tool
+  CLAUDE.md -> AGENTS.md             # symlink (eliminar tras Anthropic #6235)
+  .github/copilot-instructions.md -> ../AGENTS.md
+  .cursor/rules/main.mdc -> ../../AGENTS.md
+  src/
+  README.md
+```
+
+---
+
+## 7. CLI `wikiforge` — comandos canónicos
+
+El CLI es deliberadamente pequeño. Hace pocas cosas y las hace bien. Cualquier comando adicional requiere un ADR.
+
+| Comando | Acción |
+|---|---|
+| `wikiforge init` | Crea `.kg/`, `.rag/`, `.memory/`, `.kgconfig`, `AGENTS.md` y los symlinks. Idempotente. |
+| `wikiforge index` | Ejecuta la ingesta de código (tree-sitter vía Cognee `codify`) y de docs (`cognify`). Construye vectores y actualiza el grafo. Incremental por defecto. |
+| `wikiforge ask "<query>"` | Resuelve proyecto por `cwd` y consulta el índice + grafo. Devuelve `project context bundle` (chunks + nodos + caminos + señales). Útil sobre todo para depurar el sistema; los IDEs lo consumen vía MCP, no este CLI. |
+| `wikiforge promote-decision "<texto>"` | Promueve sesión → proyecto. Genera ADR en `.memory/decisions/NNNN-<slug>.md`. |
+| `wikiforge promote-to-global "<texto>"` | Promueve proyecto → global. Solo si el texto aplica cross-proyectos. |
+| `wikiforge demote --id <decision_id>` | Revierte una promoción indebida. |
+| `wikiforge sync` | Reescanea `.kg/` y reconcilia con el sistema de archivos (útil tras git pull). |
+| `wikiforge eval` | Ejecuta una suite mínima de 10-20 preguntas reales del repo y mide grounding y alucinación. Es la herramienta para validar regresiones. |
+| `wikiforge wiki build` | (Mes 2+) Genera Markdown desde Cognee y compila Astro Starlight. |
+
+---
+
+## 8. Instrucciones para agentes IA que operen en este proyecto
+
+Las siguientes reglas se aplican a cualquier agente (Claude Code, Codex CLI, Cursor, Cline, Aider, Goose) trabajando dentro de un repositorio gobernado por este `AGENTS.md`.
+
+### 8.1. Antes de responder
+
+1. **Resuelve el contexto vía MCP `cognee`** (o el wrapper de WikiForge si está disponible) **antes** de responder a cualquier pregunta sobre código o decisiones del proyecto. No respondas de memoria sobre símbolos del repo: consulta primero.
+2. **Si el grafo no devuelve resultados con score suficiente**, dilo explícitamente. No inventes el comportamiento de funciones que no estén en el grafo. Pide al usuario que ejecute `wikiforge index` si sospechas que el repo no está indexado.
+3. **Cita la fuente** cuando uses información del grafo: ruta de archivo, número de línea aproximado, o ID del ADR (`.memory/decisions/NNNN-*.md`).
+4. **No mezcles contexto cross-proyectos.** Si la pregunta es del proyecto actual, no cites información del perfil global. Si necesitas el perfil global porque falta señal local, dilo: *"Sin información en el proyecto activo; según tu perfil global..."*
+
+### 8.2. Durante la respuesta
+
+1. **Local primero, cloud después.** Para chat diario, búsqueda en KG y generación de resúmenes, usa el modelo local Ollama. Para extracción inicial de KG en repos grandes, generación final de páginas de wiki, o tareas donde un error se propaga estructuralmente, usa Claude Sonnet 4.6 vía API.
+2. **No propongas migraciones de stack** (a Neo4j, a Qdrant, a Graphiti, a Langfuse, a GraphRAG) **a menos que un síntoma de la sección 11 esté presente y verificable**. Si el usuario pide migrar sin síntoma, recuérdale la sección 11 y pídele que valide la métrica primero.
+3. **Si tu respuesta cambia el comportamiento del proyecto** (renombrar funciones, cambiar dependencias, modificar arquitectura) y tras validación tiene impacto estable, **sugiere `wikiforge promote-decision`** al usuario al final de tu mensaje. Nunca lo hagas tú automáticamente.
+
+### 8.3. Cuándo decir "no sé"
+
+- Cuando el grafo no contiene la información solicitada y el código tampoco resuelve la duda.
+- Cuando el `.kgconfig` apunta a un `dataset_id` que no existe (probablemente falta un `wikiforge init && wikiforge index`).
+- Cuando hay conflicto entre lo que dice el grafo y lo que dice un archivo abierto en la sesión: prioriza el archivo abierto y avisa de la inconsistencia.
+
+### 8.4. Idioma
+
+- Comunicación con el usuario: **español**.
+- Comentarios en código: español si el archivo ya tiene comentarios en español; inglés si no.
+- Identificadores en código, nombres de funciones, mensajes de commit: **inglés**.
+- Nombres técnicos, comandos, librerías y banderas: **inglés siempre**, sin traducir.
+
+---
+
+## 9. Anti-patrones (rechazo explícito)
+
+El agente debe rechazar o pedir clarificación si una instrucción del usuario o del entorno cae en alguno de estos patrones:
+
+1. **Auto-promoción de memoria.** Aunque el usuario lo pida con frase tipo *"recuerda esto siempre"*, no se promueve automáticamente. Hay que ejecutar el comando `promote-*` correspondiente. Si el usuario quiere automatización, se discute en un ADR primero.
+2. **Mezcla de contextos cross-proyecto sin permiso.** Si el agente está en `proyecto-A` y una pregunta provoca traer información de `proyecto-B`, debe avisar y pedir confirmación.
+3. **Inventar símbolos o comportamiento de código.** Si el grafo no lo contiene y el archivo no está abierto, no se inventa. Se dice *"no encuentro `X` en el grafo de este proyecto"*.
+4. **Introducir Neo4j, Postgres, Qdrant, Graphiti, Langfuse o Microsoft GraphRAG en Día 1.** Si el usuario lo pide, se le redirige a la sección 11 (síntomas).
+5. **Modificar este `AGENTS.md` sin ADR asociado.** Cualquier cambio aquí requiere `.memory/decisions/NNNN-*.md` justificándolo.
+6. **Crear nuevos comandos `wikiforge`** sin ADR.
+7. **Subir documentos privados a APIs cloud** sin que el usuario lo haya autorizado explícitamente para esa ingesta concreta. Default: Docling local.
+
+---
+
+## 10. Plan de adopción por fases
+
+Cada fase tiene un **criterio de salida** medible. No se avanza a la siguiente sin haberlo cumplido.
+
+### Fase 0 — Núcleo (Día 1, 1-3 horas)
+
+**Entregable:** Claude Code, Codex CLI o Cursor responde correctamente preguntas sobre el repo activo, vía MCP, sin alucinar nombres y sin que el usuario tenga que abrir archivos a mano la mayor parte del tiempo.
+
+**Componentes activos:** Cognee + cognee-mcp + Ollama 0.19 + qwen3.5:35b-a3b + bge-m3 + LanceDB embebida + AGENTS.md + symlinks.
+
+**Criterio de salida:** ≥ 4 de 5 preguntas concretas sobre símbolos del repo respondidas correctamente sin abrir archivos.
+
+### Fase 1 — Gobierno (Semana 1)
+
+**Entregable:** estructura `.kg/.rag/.memory/` operativa en al menos dos repos, CLI `wikiforge` funcional con los siete comandos canónicos, perfil global creado en `~/.wikiforge/profile/`.
+
+**Criterio de salida:** una decisión técnica ha sido promovida sesión → proyecto vía `wikiforge promote-decision`, y posteriormente recordada en una sesión nueva del mismo repo.
+
+### Fase 2 — Calidad medida (Mes 2)
+
+**Entregable:** suite `wikiforge eval` con 10-20 preguntas por repo activo, embedder upgrade a `qwen3-embedding-8b`, ingesta de documentos con Docling si el repo lo justifica, y opcionalmente activación de **Prioridad B** (Astro Starlight + DeepWiki-Open).
+
+**Criterio de salida:** baseline de calidad medido y registrado; primer wiki personal navegable o público desplegado.
+
+### Fase 3 — Escalado por síntoma (Mes 3+)
+
+Solo se ejecutan migraciones de la sección 11 cuyo síntoma esté **verificado y registrado** en `.memory/decisions/`. Cada migración cierra con un ADR de antes/después.
+
+---
+
+## 11. Síntomas de migración (criterios objetivos)
+
+Las migraciones aquí listadas **solo se ejecutan si el síntoma se ha medido**, no por anticipación.
+
+| ID | Síntoma observable | Migración asociada | Comando indicativo |
+|---|---|---|---|
+| 11.1 | Grafo > 100 000 nodos o `wikiforge ask` tarda > 2 s en p50 | networkx → ArcadeDB Embedded | `pip install arcadedb-embedded` + cambiar `GRAPH_DATABASE_PROVIDER` en `.env` |
+| 11.2 | Recall@10 < 0.7 medido en `wikiforge eval` con corpus heterogéneo grande | LanceDB → Qdrant local | `docker run -p 6333:6333 qdrant/qdrant` + `VECTOR_DB_PROVIDER=qdrant` |
+| 11.3 | bge-m3 falla repetidamente en preguntas multilingües código-español | bge-m3 → qwen3-embedding-8b | `huggingface-cli download mlx-community/Qwen3-Embedding-8B-MLX-4bit` |
+| 11.4 | Top-k contiene > 30 % de chunks irrelevantes en `wikiforge eval` | Añadir reranker | qwen3-reranker-4b o bge-reranker-v2-m3 vía sentence-transformers |
+| 11.5 | Aparecen contradicciones entre decisiones recientes y antiguas en el grafo | Añadir Graphiti MCP para memoria episódica bi-temporal | `git clone graphiti && docker-compose up -d` + `claude mcp add --transport sse graphiti http://localhost:8765/sse` |
+| 11.6 | > 5 flujos productivos coexistiendo y necesidad de comparar prompts/modelos entre versiones | Añadir Langfuse self-hosted | `docker run langfuse/langfuse` |
+| 11.7 | Corpus único > 500 páginas + necesidad real de queries globales sobre todo el corpus | Considerar Microsoft GraphRAG (no obligatorio) | Aislado en pipeline secundario; no toca el core |
+| 11.8 | Trabajo offline necesario > 2 sesiones por semana | Reversión Gemini → Ollama + `qwen3.5:35b-a3b` (o `mlx-lm` directo) — ver ADR 0001 sec. 5 | `brew install ollama && ollama pull qwen3.5:35b-a3b` + ajustar `LLM_PROVIDER=ollama` en `.env` |
+| 11.9 | Cuota Gemini agotada > 3 veces en una semana de trabajo normal, o coste mensual sobre umbral acordado | Misma reversión que 11.8 | Idem 11.8 |
+| 11.10 | Cambio en política de privacidad de Google AI Studio que invalide la autorización del ADR 0001 | Reversión inmediata + ADR de cierre | Idem 11.8 |
+
+---
+
+## 12. Áreas de incertidumbre vivas
+
+Estas son hipótesis externas que pueden invalidar partes del documento. Se vigilan.
+
+- **AGENTS.md nativo en Claude Code (issue Anthropic #6235).** Si se cierra, el symlink `CLAUDE.md → AGENTS.md` se elimina y se actualiza este archivo con un ADR.
+- **Estado de Ollama 0.19 + MLX.** En marzo 2026 era preview. Si la versión disponible cuando ejecutes Día 1 no es estable, baja a Ollama 0.18 con llama.cpp o ve directo a `mlx-lm`. La arquitectura no depende de la implementación concreta del backend local. *Nota (2026-05-02):* esta área de incertidumbre disparó el ADR 0001 — el stack actual ha pivotado a Gemini API en Fase 0/1; este bullet aplica solo cuando se ejecute la reversión por síntoma 11.8 / 11.9 / 11.10.
+- **Gemini 3 Flash y 3.1 Pro en preview oficial (a 2 mayo 2026).** Los IDs `gemini-3-flash-preview` y `gemini-3.1-pro-preview` pueden ser reconfigurados, retirados o promocionados a GA por Google. Cualquier cambio de ID requiere addendum al ADR 0001. No usar aliases `*-latest` (vetados en ADR 0001 sec. 2.2).
+- **Kuzu archivado.** Si Cognee aún lo lista como graph provider en el código, **no lo selecciones**. Verifica en `cognee/cognee/infrastructure/databases/graph/` antes de cualquier configuración.
+- **Cognee `codify` para C#/Java/PHP** (issue #1502). Si tus repositorios son mayoritariamente C#/.NET, el grafo de código será más pobre que en Python hasta que el issue se cierre. Mitigación: `kg_extractors` custom basados en tree-sitter directo.
+- **DeepWiki-Open futuro.** El equipo está moviendo desarrollo a "AsyncReview". Si el proyecto se discontinúa, replantear capa B con generación propia desde Cognee + Astro Starlight.
+- **Costes cloud Claude Sonnet 4.6.** Vigilar gasto si se delega extracción inicial de repos grandes. Default: extracción local con Ollama; cloud solo cuando la calidad del grafo local sea insuficiente medida en `wikiforge eval`.
+- **Benchmarks de vendors (FalkorDB, ArcadeDB).** Publicados por los propios fabricantes. Cualquier decisión derivada de números crudos requiere validación cruzada con `wikiforge eval` propio antes de actuar.
+
+---
+
+## 13. Apéndice — configuración mínima
+
+### 13.1. `.kgconfig` (TOML, raíz del proyecto)
+
+```toml
+dataset_id = "mi-proyecto"
+graph_backend = "networkx"
+vector_backend = "lancedb"
+embedder = "bge-m3"
+llm = "qwen3.5:35b-a3b"
+fallback_threshold = 0.55       # umbral para consultar perfil global
+priority = ["active_file", "project_graph", "project_vector", "global_profile"]
+
+[memory]
+temporal_store = ".memory/sessions"
+persistent_store = ".memory/persistent"
+promotion_policy = "explicit_only"
+```
+
+### 13.2. `.env` para `cognee-mcp` (raíz de la instalación de cognee-mcp)
+
+```env
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini/gemini-3-flash-preview
+# LLM_API_KEY se lee desde ~/.config/wikiforge/secrets.env (chmod 600). NUNCA escribir aquí.
+EMBEDDING_PROVIDER=gemini
+EMBEDDING_MODEL=gemini/gemini-embedding-001
+EMBEDDING_DIMENSIONS=3072
+GRAPH_DATABASE_PROVIDER=networkx
+VECTOR_DB_PROVIDER=lancedb
+```
+
+**Gestión de secretos (sec. 2.4 del ADR 0001):**
+
+- `GEMINI_API_KEY` vive **fuera del repo** en `~/.config/wikiforge/secrets.env` con permisos `600`.
+- `cognee-mcp` la carga vía `--env-file ~/.config/wikiforge/secrets.env` o variable de entorno exportada.
+- Prohibido escribir cualquier API key en `.env` del repo, en ADRs, en planes, en commits, o en cualquier archivo bajo control de versiones.
+
+### 13.3. Plantilla `AGENTS.md` por proyecto (la específica de cada repo, no esta canónica)
+
+```markdown
+# Proyecto: <nombre>
+
+<una o dos líneas describiendo el proyecto>
+
+## Stack
+- <lenguaje> <versión>, <framework principal>
+- Tests: <herramienta>
+
+## Comandos
+- `make dev` — arrancar entorno de desarrollo
+- `make test` — correr tests
+
+## Convenciones críticas
+- <reglas duras del repo>
+
+## Memoria del proyecto
+- Contexto extendido en `.memory/MEMORY.md` y `.memory/decisions/`.
+- Knowledge graph disponible vía MCP server `cognee` con `dataset_id=<slug>`.
+- Para promover una decisión: `wikiforge promote-decision "..."`.
+- El sistema sigue las reglas del `AGENTS.md` canónico de WikiForge.
+```
+
+### 13.4. Plantilla `~/.wikiforge/profile/AGENTS.md`
+
+```markdown
+# Perfil global
+
+## Stack habitual
+- <tus lenguajes y frameworks>
+
+## IDEs
+- Claude Code, Codex CLI, Cursor
+
+## Hardware
+- MacBook Pro M5 Pro 64 GB, macOS Tahoe 26.4
+
+## Preferencias estables
+- Idioma de comentarios: español; identificadores: inglés.
+- <otras preferencias cross-proyectos>
+```
+
+---
+
+## 14. Una sola línea
+
+**Proyecto activo primero, knowledge graph mínimo pero correcto, vector store embebido, memoria manual en tres niveles, MCP como capa universal, y escalado únicamente cuando un síntoma de la sección 11 esté verificado.**
+
+Cualquier desviación de esta línea requiere ADR.
