@@ -10,7 +10,10 @@
 
 ## Planes activos
 
-- [Plan 0001 — Bootstrap Fase 0](plans/0001-fase-0-bootstrap.md) — *(pendiente de redactar tras aceptación ADR 0001)*
+- [Plan 0001 — Bootstrap Fase 0](plans/0001-fase-0-bootstrap.md) — Status: **infrastructure DONE, validation gate FAIL** (2026-05-02). Cognify cortado por quota Gemini free tier.
+- [Plan 0001 — Preguntas de validación](plans/0001-fase-0-bootstrap-questions.md) — 5 preguntas con ground truth.
+- [Plan 0001 — Resultados validación](plans/0001-fase-0-bootstrap-results.md) — 0.0/5.0, FAIL. Causa raíz + caminos de desbloqueo documentados.
+- [Plan 0001 — Respuestas crudas](plans/0001-fase-0-bootstrap-raw-answers.json) — output de validate_phase0.py (CHUNKS+SUMMARIES).
 
 ## Convenciones
 
@@ -21,5 +24,7 @@
 ## Estado del repositorio
 
 - Repo de prueba para Fase 0: `~/Developer/ai/uml-class_diagram` (autorización de privacidad: ADR 0001 sec. 6).
-- Stack canónico activo (post-ADR 0002): Cognee 1.0 + Ollama (`qwen3:30b` + `bge-m3`) + Kuzu embedded + LanceDB embebida.
-- Snapshot de máquina del tiempo previo al pivote: tag `wf-checkpoint-2026-05-02-1746` (commit `828824c`).
+- Stack canónico activo (post-ADR 0003): Cognee 1.0 + Gemini 3 Flash + `gemini-embedding-001` + Kuzu embedded + LanceDB embebida.
+- Snapshot de máquina del tiempo previo al primer pivote: tag `wf-checkpoint-2026-05-02-1746` (commit `828824c`).
+- Tag al final del bootstrap (FAIL por quota): `wf-fase-0-blocked-by-gemini-quota-2026-05-02`.
+- Acción siguiente: activar billing en GCP proyecto WikiForge #846938751343 (5 min) y re-ejecutar `index_phase0.py` + `validate_phase0.py`. Ver `.memory/plans/0001-fase-0-bootstrap-results.md` "Próxima acción".
