@@ -44,12 +44,11 @@ Estas siete decisiones están firmes. El resto se deriva de ellas.
 | Componente | Elección actual (Fase 0/1) | Migración prevista | Estado |
 |---|---|---|---|
 | Engine de KG/RAG | **Cognee** (`cognify`, `codify`, `search`, `prune`) | LlamaIndex PropertyGraphIndex si Cognee impone fricción no compensada | Activo |
-| Graph backend | **Default Cognee — networkx + SQLite** (in-process) | ArcadeDB Embedded (`arcadedb-embedded` PyPI, wheel `macosx_11_0_arm64`) cuando aplique síntoma 11.1 | Activo |
+| Graph backend | **Kuzu** embedded (excepción provisional documentada en ADR 0002 sec. 5; Cognee 1.0 eliminó networkx) | networkx si Cognee lo reintroduce; ArcadeDB Embedded cuando aplique síntoma 11.1 | Activo |
 | Vector store | **LanceDB embebida** (Rust + Arrow, ARM64 nativo, default Cognee) | Qdrant local cuando aplique síntoma 11.2 | Activo |
-| LLM principal | **Gemini API — `gemini-3-flash-preview`** (versión fija, sin aliases `-latest`) — ver ADR 0001 | Reversión a Ollama+qwen3.5 cuando aplique síntoma 11.8 / 11.9 / 11.10. Claude Sonnet 4.6 sigue disponible para wikis públicos y casos donde Gemini no encaje. | Activo (Fase 0/1) |
-| LLM extracción crítica | **Gemini API — `gemini-3.1-pro-preview`** | — | Activo, uso bajo demanda |
-| LLM cloud secundario | **Claude Sonnet 4.6** vía API | — | Reservado para wikis públicos y casos donde Gemini no aplique |
-| Embeddings | **Gemini `gemini-embedding-001`** (3072 dims, multilingüe) — ver ADR 0001 | qwen3-embedding-8b o bge-m3 local cuando aplique síntoma 11.3 inverso (Gemini falle en multilingüe código-español) | Activo |
+| LLM local | **Ollama + `qwen3:30b`** (mejor aproximación a `qwen3.5:35b-a3b` del AGENTS.md original; ese modelo no existe en Ollama hoy 2026-05-02) — ver ADR 0002 | `qwen3:32b` (dense) si síntoma de calidad lo justifica; `mlx-lm` directo si Ollama falla | Activo (Fase 0/1) |
+| LLM cloud | **Claude Sonnet 4.6** vía API | — | Reservado para wikis públicos y extracción crítica si la calidad local no basta (medido en `wikiforge eval` — Fase 2) |
+| Embeddings | **Ollama + `bge-m3`** (~570 MB, multilingüe sólido) — ver ADR 0002 | `qwen3-embedding-8b` cuando aplique síntoma 11.3 | Activo |
 | Reranker | **No instalado en Día 1** | qwen3-reranker-4b o bge-reranker-v2-m3 cuando aplique síntoma 11.4 | Diferido |
 | Ingesta de código | **tree-sitter vía `cognee.run_code_graph_pipeline`** (Python sólido) | `kg_extractors` custom para C#/Java/PHP mientras esté abierto issue Cognee #1502 | Activo |
 | Ingesta de PDFs/docs | **Docling local** (Apache 2.0, ARM64) | — | Activo (solo si el repo tiene PDFs relevantes) |
@@ -62,13 +61,13 @@ Estas siete decisiones están firmes. El resto se deriva de ellas.
 
 **Descartados con razón documentada:**
 
-- **Kuzu** — repositorio archivado el 10/10/2025 tras adquisición Apple. No iniciar nada nuevo sobre Kuzu. Si un provider en Cognee aún lo lista, migrar antes de que rompa.
+- **Kuzu como elección de largo plazo** — sigue archivado tras adquisición Apple. **Se usa provisionalmente en Fase 0/1 por excepción del ADR 0002 sec. 5** (única opción in-process en Cognee 1.0 compatible con AGENTS.md sec. 9). Migrar antes de que rompa cuando aplique cualquier síntoma de cierre listado en ADR 0002 sec. 5.
 - **Neo4j Community como graph backend del Día 1** — overkill, JVM consume RAM que se necesita para los modelos MLX, no aporta nada que ArcadeDB no cubra cuando llegue el momento.
 - **PostgreSQL + JSONB + pgvector como capa canónica del Día 1** — propuesta del Flujo 2 original; correcta para empresa, excesiva para un solo desarrollador con foco en CLI.
 - **Microsoft GraphRAG** — reservado solo para corpus enormes (>500 páginas) con queries globales y presupuesto cloud. No aplica al caso. LightRAG se descarta también por ausencia de MCP server oficial.
 - **Langfuse en Día 1** — overhead injustificado hasta tener métricas concretas de regresión.
-- **Ollama + `qwen3.5:35b-a3b` en Día 1** — diferido por ADR 0001. La estabilidad de Ollama 0.19 + MLX en preview a marzo 2026 y el peso del modelo (~22 GB) justifican operar en cloud Gemini hasta que un síntoma de la sec. 11 (11.8 / 11.9 / 11.10) fuerce la reversión. Reactivable con un commit.
-- **MiniMax M2.x para Cognee** — descartado en ADR 0001 por: (a) no es first-class en Cognee, (b) la Code Subscription da acceso a M2.1 (no al flagship M2.7), (c) quota rolling 5 h colapsa en indexación batch, (d) SWE-bench inferior a Gemini 3 Flash. MiniMax sigue disponible como modelo de chat dentro de Claude Code/Cursor vía Coding Plan, no como provider de Cognee.
+- **Gemini API como LLM principal** — propuesto y descartado por ADR 0002 (que reemplaza a ADR 0001). Cognee 1.0 eliminó networkx y eso, sumado a la delegación del usuario "implementa con modelo local", forzó pivote a Ollama. ADR 0001 queda como `Superseded`.
+- **MiniMax M2.x para Cognee** — descartado en ADR 0001 sec. 2.2.bis (ADR ahora `Superseded`, pero el descarte sigue vigente por las mismas razones técnicas: no es first-class en Cognee, Code Subscription da acceso a M2.1 no al flagship M2.7, quota rolling 5 h colapsa en indexación batch).
 
 ---
 
@@ -279,9 +278,7 @@ Las migraciones aquí listadas **solo se ejecutan si el síntoma se ha medido**,
 | 11.5 | Aparecen contradicciones entre decisiones recientes y antiguas en el grafo | Añadir Graphiti MCP para memoria episódica bi-temporal | `git clone graphiti && docker-compose up -d` + `claude mcp add --transport sse graphiti http://localhost:8765/sse` |
 | 11.6 | > 5 flujos productivos coexistiendo y necesidad de comparar prompts/modelos entre versiones | Añadir Langfuse self-hosted | `docker run langfuse/langfuse` |
 | 11.7 | Corpus único > 500 páginas + necesidad real de queries globales sobre todo el corpus | Considerar Microsoft GraphRAG (no obligatorio) | Aislado en pipeline secundario; no toca el core |
-| 11.8 | Trabajo offline necesario > 2 sesiones por semana | Reversión Gemini → Ollama + `qwen3.5:35b-a3b` (o `mlx-lm` directo) — ver ADR 0001 sec. 5 | `brew install ollama && ollama pull qwen3.5:35b-a3b` + ajustar `LLM_PROVIDER=ollama` en `.env` |
-| 11.9 | Cuota Gemini agotada > 3 veces en una semana de trabajo normal, o coste mensual sobre umbral acordado | Misma reversión que 11.8 | Idem 11.8 |
-| 11.10 | Cambio en política de privacidad de Google AI Studio que invalide la autorización del ADR 0001 | Reversión inmediata + ADR de cierre | Idem 11.8 |
+| 11.8 | Calidad de extracción del LLM local insuficiente medida en `wikiforge eval` (Fase 2) — < 60% en preguntas de grounding | Considerar cloud (Claude Sonnet 4.6 ya en stack); requiere ADR autorizando ingesta cloud por repo | `cognee` con `LLM_PROVIDER=anthropic` + autorización privacidad por repo |
 
 ---
 
@@ -290,8 +287,9 @@ Las migraciones aquí listadas **solo se ejecutan si el síntoma se ha medido**,
 Estas son hipótesis externas que pueden invalidar partes del documento. Se vigilan.
 
 - **AGENTS.md nativo en Claude Code (issue Anthropic #6235).** Si se cierra, el symlink `CLAUDE.md → AGENTS.md` se elimina y se actualiza este archivo con un ADR.
-- **Estado de Ollama 0.19 + MLX.** En marzo 2026 era preview. Si la versión disponible cuando ejecutes Día 1 no es estable, baja a Ollama 0.18 con llama.cpp o ve directo a `mlx-lm`. La arquitectura no depende de la implementación concreta del backend local. *Nota (2026-05-02):* esta área de incertidumbre disparó el ADR 0001 — el stack actual ha pivotado a Gemini API en Fase 0/1; este bullet aplica solo cuando se ejecute la reversión por síntoma 11.8 / 11.9 / 11.10.
-- **Gemini 3 Flash y 3.1 Pro en preview oficial (a 2 mayo 2026).** Los IDs `gemini-3-flash-preview` y `gemini-3.1-pro-preview` pueden ser reconfigurados, retirados o promocionados a GA por Google. Cualquier cambio de ID requiere addendum al ADR 0001. No usar aliases `*-latest` (vetados en ADR 0001 sec. 2.2).
+- **Estado de Ollama y MLX.** El AGENTS.md original asumía Ollama 0.19 + MLX preview con `qwen3.5:35b-a3b`. ADR 0002 documenta el pivote a `qwen3:30b` (mejor aproximación disponible en Ollama hoy). Si la familia Qwen 3.5 llega a Ollama o si `qwen3:30b` rinde por debajo del umbral en `wikiforge eval`, ADR de actualización.
+- **Cognee 1.0 sin networkx (descubrimiento del 2026-05-02).** El stack canónico original asumía networkx; ADR 0002 documenta el pivote a Kuzu como excepción. Si Cognee reintroduce networkx, ADR 0002 sec. 5.1 dispara reversión.
+- **Gemini API explorada como alternativa cloud (ADR 0001 — Superseded).** Las API keys siguen disponibles en `~/.config/wikiforge/secrets.env`; los modelos `gemini-3-flash-preview`, `gemini-3.1-pro-preview` y `gemini-embedding-001` quedaron verificados como disponibles en el proyecto Google AI Studio "WikiForge" (#846938751343). Si la calidad local resulta insuficiente, Gemini sigue siendo opción cloud disponible bajo nuevo ADR.
 - **Kuzu archivado.** Si Cognee aún lo lista como graph provider en el código, **no lo selecciones**. Verifica en `cognee/cognee/infrastructure/databases/graph/` antes de cualquier configuración.
 - **Cognee `codify` para C#/Java/PHP** (issue #1502). Si tus repositorios son mayoritariamente C#/.NET, el grafo de código será más pobre que en Python hasta que el issue se cierre. Mitigación: `kg_extractors` custom basados en tree-sitter directo.
 - **DeepWiki-Open futuro.** El equipo está moviendo desarrollo a "AsyncReview". Si el proyecto se discontinúa, replantear capa B con generación propia desde Cognee + Astro Starlight.
@@ -322,21 +320,25 @@ promotion_policy = "explicit_only"
 ### 13.2. `.env` para `cognee-mcp` (raíz de la instalación de cognee-mcp)
 
 ```env
-LLM_PROVIDER=gemini
-LLM_MODEL=gemini/gemini-3-flash-preview
-# LLM_API_KEY se lee desde ~/.config/wikiforge/secrets.env (chmod 600). NUNCA escribir aquí.
-EMBEDDING_PROVIDER=gemini
-EMBEDDING_MODEL=gemini/gemini-embedding-001
-EMBEDDING_DIMENSIONS=3072
-GRAPH_DATABASE_PROVIDER=networkx
+LLM_PROVIDER=ollama
+LLM_MODEL=qwen3:30b
+LLM_ENDPOINT=http://localhost:11434/v1
+LLM_API_KEY=ollama
+EMBEDDING_PROVIDER=ollama
+EMBEDDING_MODEL=bge-m3
+EMBEDDING_ENDPOINT=http://localhost:11434/v1
+EMBEDDING_API_KEY=ollama
+EMBEDDING_DIMENSIONS=1024
+GRAPH_DATABASE_PROVIDER=kuzu
 VECTOR_DB_PROVIDER=lancedb
+ENABLE_BACKEND_ACCESS_CONTROL=false
 ```
 
-**Gestión de secretos (sec. 2.4 del ADR 0001):**
+**Gestión de secretos (heredada del ADR 0001 sec. 2.4, sigue vigente):**
 
-- `GEMINI_API_KEY` vive **fuera del repo** en `~/.config/wikiforge/secrets.env` con permisos `600`.
-- `cognee-mcp` la carga vía `--env-file ~/.config/wikiforge/secrets.env` o variable de entorno exportada.
-- Prohibido escribir cualquier API key en `.env` del repo, en ADRs, en planes, en commits, o en cualquier archivo bajo control de versiones.
+- API keys de cualquier provider cloud (Gemini, MiniMax, Anthropic, etc.) viven **fuera del repo** en `~/.config/wikiforge/secrets.env` con permisos `600`.
+- En el stack actual (Ollama local), `LLM_API_KEY` es el placeholder `ollama` (no es un secreto real).
+- Prohibido escribir cualquier API key real en `.env` del repo, en ADRs, en planes, en commits, o en cualquier archivo bajo control de versiones.
 
 ### 13.3. Plantilla `AGENTS.md` por proyecto (la específica de cada repo, no esta canónica)
 

@@ -4,7 +4,8 @@
 
 ## Decisiones (ADRs)
 
-- [ADR 0001 — LLM Gemini en Fase 0](decisions/0001-llm-gemini-en-fase-0.md) — Sustituye Ollama+qwen3.5 por Gemini 3 Flash. Status: Accepted (2026-05-02).
+- [ADR 0001 — LLM Gemini en Fase 0](decisions/0001-llm-gemini-en-fase-0.md) — Status: **Superseded** by ADR 0002 (2026-05-02). Cognee 1.0 sin networkx forzó pivote.
+- [ADR 0002 — Pivote a stack local + Kuzu](decisions/0002-pivote-stack-local-cognee-1-sin-networkx.md) — Stack actual: Ollama + qwen3:30b + bge-m3 + Kuzu (excepción a sec. 12). Status: Accepted (2026-05-02, delegación explícita del usuario).
 
 ## Planes activos
 
@@ -19,4 +20,5 @@
 ## Estado del repositorio
 
 - Repo de prueba para Fase 0: `~/Developer/ai/uml-class_diagram` (autorización de privacidad: ADR 0001 sec. 6).
-- Stack canónico activo: Cognee + Gemini 3 Flash + gemini-embedding-001 + LanceDB embebida + networkx.
+- Stack canónico activo (post-ADR 0002): Cognee 1.0 + Ollama (`qwen3:30b` + `bge-m3`) + Kuzu embedded + LanceDB embebida.
+- Snapshot de máquina del tiempo previo al pivote: tag `wf-checkpoint-2026-05-02-1746` (commit `828824c`).
