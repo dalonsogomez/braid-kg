@@ -12,10 +12,11 @@
 
 ## Planes activos
 
-- [Plan 0001 — Bootstrap Fase 0](plans/0001-fase-0-bootstrap.md) — Status: **infrastructure DONE, validation gate FAIL** (2026-05-02). Cognify cortado por quota Gemini free tier.
+- [Plan 0001 — Bootstrap Fase 0](plans/0001-fase-0-bootstrap.md) — Status: **PASS 4.0/5.0** (2026-05-03) con stack ADR 0005.
 - [Plan 0001 — Preguntas de validación](plans/0001-fase-0-bootstrap-questions.md) — 5 preguntas con ground truth.
-- [Plan 0001 — Resultados validación](plans/0001-fase-0-bootstrap-results.md) — 0.0/5.0, FAIL. Causa raíz + caminos de desbloqueo documentados.
+- [Plan 0001 — Resultados validación](plans/0001-fase-0-bootstrap-results.md) — **PASS 4.0/5.0**. Q1/Q4/Q5 = 1.0, Q2/Q3 = 0.5 (recuperables top-5, no top-1; reranker pendiente).
 - [Plan 0001 — Respuestas crudas](plans/0001-fase-0-bootstrap-raw-answers.json) — output de validate_phase0.py (CHUNKS+SUMMARIES).
+- [Plan 0001 — Post-mortem día 1](plans/0001-fase-0-postmortem.md) — historial de los 5 pivotes hasta ADR 0005.
 
 ## Convenciones
 
@@ -29,4 +30,4 @@
 - Stack canónico activo (post-ADR 0005): Cognee 1.0 + Ollama Cloud (`kimi-k2.6:cloud`) + `bge-m3` local + Kuzu embedded + LanceDB embebida.
 - Snapshot previo al primer pivote: tag `wf-checkpoint-2026-05-02-1746` (commit `828824c`).
 - Tag al final del bootstrap día 1 (FAIL por quota): `wf-fase-0-blocked-by-gemini-quota-2026-05-02`.
-- Reanudación día 2 con Ollama Cloud — pendiente tag final tras validation gate.
+- Tag al cierre PASS de Fase 0 (día 2 con ADR 0005): `wf-fase-0-completed-2026-05-03`.
