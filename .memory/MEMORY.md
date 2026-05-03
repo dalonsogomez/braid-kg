@@ -10,6 +10,7 @@
 - [ADR 0004 — Scope reducido por quota Flash](decisions/0004-scope-reducido-por-quota-flash.md) — Status: **Superseded** por ADR 0005 (sin cuota → scope completo viable).
 - [ADR 0005 — Ollama Cloud + bge-m3 + Kuzu](decisions/0005-ollama-cloud-kimi-bge-m3-local-kuzu.md) — **Stack vigente**. Status: **Active** (2026-05-03). Su sec. 2.2 fue corregida por ADR 0006.
 - [ADR 0006 — `.env` real con dodges LiteLLM/Ollama/pydantic](decisions/0006-env-litellm-colon-dodge.md) — **Active** (2026-05-03). Sustituye sec. 13.2 de AGENTS.md y sec. 2.2 de ADR 0005.
+- [ADR 0007 — TODO centralizar cognee_system en ~/.wikiforge/cognee/](decisions/0007-todo-centralizar-cognee-system-en-wikiforge-cognee.md) — **Active** (2026-05-03). Promovido por `wikiforge promote-decision` durante demo Fase 1.
 
 ## Planes activos
 
@@ -18,6 +19,8 @@
 - [Plan 0001 — Resultados validación](plans/0001-fase-0-bootstrap-results.md) — **PASS 4.0/5.0**. Q1/Q4/Q5 = 1.0, Q2/Q3 = 0.5 (recuperables top-5, no top-1; reranker pendiente).
 - [Plan 0001 — Respuestas crudas](plans/0001-fase-0-bootstrap-raw-answers.json) — output de validate_phase0.py (CHUNKS+SUMMARIES).
 - [Plan 0001 — Post-mortem día 1](plans/0001-fase-0-postmortem.md) — historial de los 5 pivotes hasta ADR 0005.
+- [Plan 0002 — Bootstrap Fase 1](plans/0002-fase-1-bootstrap.md) — Status: **PASS** (2026-05-03). CLI `wikiforge` funcional + 2 repos operativos + perfil global + ADR 0007 promovido.
+- [Plan 0002 — Resultados Fase 1](plans/0002-fase-1-bootstrap-results.md) — criterio de salida cumplido vía filesystem-based recall; cognee semántico diferido a Fase 2 por bugs upstream.
 
 ## Convenciones
 
@@ -32,3 +35,4 @@
 - Snapshot previo al primer pivote: tag `wf-checkpoint-2026-05-02-1746` (commit `828824c`).
 - Tag al final del bootstrap día 1 (FAIL por quota): `wf-fase-0-blocked-by-gemini-quota-2026-05-02`.
 - Tag al cierre PASS de Fase 0 (día 2 con ADR 0005): `wf-fase-0-completed-2026-05-03`.
+- Tag al cierre PASS de Fase 1 (CLI + perfil global + promote-decision demostrado): `wf-fase-1-completed-2026-05-03`.

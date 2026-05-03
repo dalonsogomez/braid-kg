@@ -1,0 +1,99 @@
+"""CLI `wikiforge` — punto de entrada con subcomandos.
+
+Comandos canónicos AGENTS.md sec. 7:
+- init, index, ask, promote-decision, promote-to-global, demote, sync, eval, wiki build
+"""
+from __future__ import annotations
+
+import argparse
+import re
+import sys
+from pathlib import Path
+
+from .commands import ask as ask_cmd
+from .commands import index as index_cmd
+from .commands import init as init_cmd
+from .commands import promote as promote_cmd
+from .commands import sync as sync_cmd
+
+
+def _slugify(text: str, max_len: int = 60) -> str:
+    s = re.sub(r"[^a-zA-Z0-9]+", "-", text.lower()).strip("-")
+    return s[:max_len].rstrip("-")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="wikiforge", description="MCP-first KG/RAG per project for AI dev tools.")
+    sub = p.add_subparsers(dest="cmd", required=True, metavar="COMMAND")
+
+    p_init = sub.add_parser("init", help="crear .kg/.rag/.memory + .kgconfig + symlinks")
+    p_init.add_argument("--dataset", help="override dataset_id (default = nombre del directorio)")
+    p_init.add_argument("--force", action="store_true", help="sobrescribir si ya existe")
+
+    p_idx = sub.add_parser("index", help="ingestar código + docs (incremental por defecto)")
+    p_idx.add_argument("--rebuild", action="store_true", help="prune previo + reindex full")
+    p_idx.add_argument("--include", action="append", default=[], help="glob extra (repetible)")
+
+    p_ask = sub.add_parser("ask", help="consultar el KG/RAG del proyecto activo")
+    p_ask.add_argument("query", help="pregunta en lenguaje natural")
+    p_ask.add_argument("--type", default="CHUNKS", choices=["CHUNKS", "SUMMARIES", "GRAPH_COMPLETION", "RAG_COMPLETION", "INSIGHTS"], help="search type de cognee")
+    p_ask.add_argument("--top-k", type=int, default=5)
+    p_ask.add_argument("--global", dest="use_global", action="store_true", help="forzar consulta al perfil global")
+
+    p_pd = sub.add_parser("promote-decision", help="sesión → proyecto: genera ADR en .memory/decisions/")
+    p_pd.add_argument("text", help="texto canónico de la decisión (1-3 frases)")
+    p_pd.add_argument("--title", help="título corto (default: derivado del texto)")
+    p_pd.add_argument("--tags", default="", help="tags coma-separados")
+
+    p_pg = sub.add_parser("promote-to-global", help="proyecto → global: copia decisión al perfil global")
+    p_pg.add_argument("decision_id", help="NNNN o slug del ADR a promover")
+
+    p_dm = sub.add_parser("demote", help="revertir una promoción indebida")
+    p_dm.add_argument("--id", required=True, help="NNNN del ADR a degradar")
+
+    p_sy = sub.add_parser("sync", help="reescanear `.kg/` y reconciliar (alias de index incremental)")
+
+    p_ev = sub.add_parser("eval", help="(stub) suite de preguntas → métricas")
+
+    p_wiki = sub.add_parser("wiki", help="(stub Mes 2+) generar wiki publicable")
+    p_wiki.add_argument("subcmd", choices=["build"])
+
+    p_status = sub.add_parser("status", help="resumen del proyecto activo + perfil global")
+
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    cmd = args.cmd
+
+    if cmd == "init":
+        return init_cmd.run(dataset=args.dataset, force=args.force)
+    if cmd == "index":
+        return index_cmd.run(rebuild=args.rebuild, extra_globs=args.include)
+    if cmd == "ask":
+        return ask_cmd.run(query=args.query, search_type=args.type, top_k=args.top_k, use_global=args.use_global)
+    if cmd == "promote-decision":
+        return promote_cmd.run_promote_decision(text=args.text, title=args.title, tags=args.tags)
+    if cmd == "promote-to-global":
+        return promote_cmd.run_promote_to_global(decision_id=args.decision_id)
+    if cmd == "demote":
+        return promote_cmd.run_demote(decision_id=args.id)
+    if cmd == "sync":
+        return sync_cmd.run()
+    if cmd == "status":
+        from .commands import status as status_cmd
+        return status_cmd.run()
+    if cmd == "eval":
+        print("[wikiforge eval] stub — Fase 2 deliverable; usar `validate_phase0.py` mientras tanto", file=sys.stderr)
+        return 1
+    if cmd == "wiki":
+        print("[wikiforge wiki build] stub — Mes 2+; ver AGENTS.md sec. 7", file=sys.stderr)
+        return 1
+
+    print(f"unknown command: {cmd}", file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
