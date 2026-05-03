@@ -46,10 +46,9 @@ Estas siete decisiones están firmes. El resto se deriva de ellas.
 | Engine de KG/RAG | **Cognee** (`cognify`, `codify`, `search`, `prune`) | LlamaIndex PropertyGraphIndex si Cognee impone fricción no compensada | Activo |
 | Graph backend | **Kuzu** embedded (excepción provisional documentada en ADR 0002 sec. 5; Cognee 1.0 eliminó networkx) | networkx si Cognee lo reintroduce; ArcadeDB Embedded cuando aplique síntoma 11.1 | Activo |
 | Vector store | **LanceDB embebida** (Rust + Arrow, ARM64 nativo, default Cognee) | Qdrant local cuando aplique síntoma 11.2 | Activo |
-| LLM principal | **Gemini API — `gemini-3-flash-preview`** — ver ADR 0003 (re-pivote forzoso por bloqueo de Cloudflare R2 que impide descargar modelos Ollama) | Reversión a Ollama+qwen cuando R2 vuelva accesible (ADR 0004 futuro) | Activo (Fase 0/1) |
-| LLM extracción crítica | **Gemini API — `gemini-3.1-pro-preview`** | — | Activo, uso bajo demanda |
-| LLM cloud secundario | **Claude Sonnet 4.6** vía API | — | Reservado para wikis públicos y casos donde Gemini no aplique |
-| Embeddings | **Gemini `gemini-embedding-001`** (3072 dims, multilingüe) — ver ADR 0003 | `bge-m3` vía Ollama cuando R2 vuelva | Activo |
+| LLM principal | **Ollama Cloud — `kimi-k2.6:cloud`** (Kimi K2.6 de Moonshot AI servido remotamente vía plan Ollama Cloud del usuario) — ver ADR 0005 | Local `qwen3:30b` si Ollama Cloud falla; Claude Sonnet 4.6 vía API si calidad insuficiente | Activo (Fase 0/1) |
+| LLM cloud secundario | **Claude Sonnet 4.6** vía API | — | Reservado para wikis públicos y casos donde Kimi no aplique |
+| Embeddings | **Ollama local — `bge-m3`** (~570 MB descarga, multilingüe sólido, 1024 dims) — ver ADR 0005 | `qwen3-embedding-8b` cuando aplique síntoma 11.3 | Activo |
 | Reranker | **No instalado en Día 1** | qwen3-reranker-4b o bge-reranker-v2-m3 cuando aplique síntoma 11.4 | Diferido |
 | Ingesta de código | **tree-sitter vía `cognee.run_code_graph_pipeline`** (Python sólido) | `kg_extractors` custom para C#/Java/PHP mientras esté abierto issue Cognee #1502 | Activo |
 | Ingesta de PDFs/docs | **Docling local** (Apache 2.0, ARM64) | — | Activo (solo si el repo tiene PDFs relevantes) |
@@ -279,7 +278,9 @@ Las migraciones aquí listadas **solo se ejecutan si el síntoma se ha medido**,
 | 11.5 | Aparecen contradicciones entre decisiones recientes y antiguas en el grafo | Añadir Graphiti MCP para memoria episódica bi-temporal | `git clone graphiti && docker-compose up -d` + `claude mcp add --transport sse graphiti http://localhost:8765/sse` |
 | 11.6 | > 5 flujos productivos coexistiendo y necesidad de comparar prompts/modelos entre versiones | Añadir Langfuse self-hosted | `docker run langfuse/langfuse` |
 | 11.7 | Corpus único > 500 páginas + necesidad real de queries globales sobre todo el corpus | Considerar Microsoft GraphRAG (no obligatorio) | Aislado en pipeline secundario; no toca el core |
-| 11.8 | Calidad de extracción del LLM local insuficiente medida en `wikiforge eval` (Fase 2) — < 60% en preguntas de grounding | Considerar cloud (Claude Sonnet 4.6 ya en stack); requiere ADR autorizando ingesta cloud por repo | `cognee` con `LLM_PROVIDER=anthropic` + autorización privacidad por repo |
+| 11.8 | Ollama Cloud caído > 1 vez por semana o latencia > 5s p50 | Reversión a `qwen3:30b` local — ADR 0005 sec. 4 | `ollama pull qwen3:30b` + cambiar `LLM_MODEL` en `.env` |
+| 11.9 | Coste mensual del plan Ollama Cloud sobre umbral acordado | Reversión a stack 100% local o cambio de plan | Idem 11.8 + revisar plan |
+| 11.10 | Calidad de extracción del LLM insuficiente medida en `wikiforge eval` (Fase 2) — < 60% en preguntas de grounding | Considerar Claude Sonnet 4.6 (ya en stack); requiere ADR autorizando ingesta cloud por repo | `cognee` con `LLM_PROVIDER=anthropic` + autorización privacidad por repo |
 
 ---
 
@@ -321,16 +322,22 @@ promotion_policy = "explicit_only"
 ### 13.2. `.env` para `cognee-mcp` (raíz de la instalación de cognee-mcp)
 
 ```env
-# Stack actual: ADR 0003 (Gemini + kuzu)
-LLM_PROVIDER=gemini
-LLM_MODEL=gemini/gemini-3-flash-preview
-EMBEDDING_PROVIDER=gemini
-EMBEDDING_MODEL=gemini/gemini-embedding-001
-EMBEDDING_DIMENSIONS=3072
+# Stack actual: ADR 0005 (Ollama Cloud + bge-m3 local + kuzu)
+LLM_PROVIDER=ollama
+LLM_MODEL=ollama/kimi-k2.6:cloud
+LLM_ENDPOINT=http://localhost:11434/v1
+LLM_API_KEY=ollama
+EMBEDDING_PROVIDER=ollama
+EMBEDDING_MODEL=bge-m3
+EMBEDDING_ENDPOINT=http://localhost:11434/v1
+EMBEDDING_API_KEY=ollama
+EMBEDDING_DIMENSIONS=1024
+HUGGINGFACE_TOKENIZER=BAAI/bge-m3
 GRAPH_DATABASE_PROVIDER=kuzu
 VECTOR_DB_PROVIDER=lancedb
 ENABLE_BACKEND_ACCESS_CONTROL=false
-# LLM_API_KEY (= GEMINI_API_KEY) inyectada en runtime desde ~/.config/wikiforge/secrets.env vía shim
+COGNEE_SKIP_CONNECTION_TEST=true
+# La autenticación con Ollama Cloud para modelos `:cloud` se hace vía `ollama login` (una vez).
 ```
 
 **Gestión de secretos (heredada del ADR 0001 sec. 2.4, sigue vigente):**
