@@ -1,0 +1,12 @@
+dataset_id = "WikiForge"
+graph_backend = "kuzu"
+vector_backend = "lancedb"
+embedder = "bge-m3"
+llm = "kimi-k2.6:cloud"
+fallback_threshold = 0.55
+priority = ["active_file", "project_graph", "project_vector", "global_profile"]
+
+[memory]
+temporal_store = ".memory/sessions"
+persistent_store = ".memory/persistent"
+promotion_policy = "explicit_only"
