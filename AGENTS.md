@@ -281,6 +281,7 @@ Las migraciones aquí listadas **solo se ejecutan si el síntoma se ha medido**,
 | 11.8 | Ollama Cloud caído > 1 vez por semana o latencia > 5s p50 | Reversión a `qwen3:30b` local — ADR 0005 sec. 4 | `ollama pull qwen3:30b` + cambiar `LLM_MODEL` en `.env` |
 | 11.9 | Coste mensual del plan Ollama Cloud sobre umbral acordado | Reversión a stack 100% local o cambio de plan | Idem 11.8 + revisar plan |
 | 11.10 | Calidad de extracción del LLM insuficiente medida en `wikiforge eval` (Fase 2) — < 60% en preguntas de grounding | Considerar Claude Sonnet 4.6 (ya en stack); requiere ADR autorizando ingesta cloud por repo | `cognee` con `LLM_PROVIDER=anthropic` + autorización privacidad por repo |
+| 11.11 | `GGML_ASSERT([rsets->data count] == 0) failed` o "model runner has unexpectedly stopped" al cargar modelo Ollama local | Verificar que solo hay UN `ollama serve` en port 11434 — ADR 0006 sec. 2.4 | `lsof -nP -iTCP:11434 -sTCP:LISTEN`. Si hay dos (homebrew + Ollama.app): apagar Ollama.app O `brew services stop ollama`, dejar solo uno. |
 
 ---
 
@@ -321,23 +322,48 @@ promotion_policy = "explicit_only"
 
 ### 13.2. `.env` para `cognee-mcp` (raíz de la instalación de cognee-mcp)
 
+> Versión actualizada por **ADR 0006** con dodges para tres bugs upstream descubiertos durante el bootstrap de Fase 0 (LiteLLM `:` parsing, OllamaEmbeddingEngine `/api/embed` 422, pydantic tokenizer gate). Esta es la versión que **realmente funciona**, no la teórica.
+
 ```env
-# Stack actual: ADR 0005 (Ollama Cloud + bge-m3 local + kuzu)
-LLM_PROVIDER=ollama
-LLM_MODEL=ollama/kimi-k2.6:cloud
+# Stack ADR 0005 con dodges ADR 0006 (Ollama Cloud + bge-m3 local + kuzu)
+
+# --- LLM ---
+# Dodge LiteLLM ':' parser: provider=openai con model=openai/<name> apuntando al endpoint
+# OpenAI-compat de Ollama (puerto 11434/v1). Bypassea el codepath nativo LiteLLM-ollama
+# que parte el name en el primer ':' y rompe modelos `:cloud`.
+LLM_PROVIDER=openai
+LLM_MODEL=openai/kimi-k2.6:cloud
 LLM_ENDPOINT=http://localhost:11434/v1
 LLM_API_KEY=ollama
+
+# Rate limit estricto: cognee dispara extracciones LLM paralelas durante cognify y
+# Ollama Cloud devuelve 429 "too many concurrent requests" sin esto.
+LLM_RATE_LIMIT_ENABLED=true
+LLM_RATE_LIMIT_REQUESTS=2
+LLM_RATE_LIMIT_INTERVAL=5
+
+# --- Embeddings ---
+# Dodge OllamaEmbeddingEngine /api/embed 422: usar el path OpenAI-compat /v1/embeddings
+# (acepta `dimensions` aunque lo ignore). Mantener provider=ollama para que el engine
+# use HUGGINGFACE_TOKENIZER en lugar de TikToken (que no conoce bge-m3 → KeyError).
 EMBEDDING_PROVIDER=ollama
 EMBEDDING_MODEL=bge-m3
-EMBEDDING_ENDPOINT=http://localhost:11434/v1
+EMBEDDING_ENDPOINT=http://localhost:11434/v1/embeddings
 EMBEDDING_API_KEY=ollama
 EMBEDDING_DIMENSIONS=1024
+
+# Pydantic gate: requerido cuando se setean los EMBEDDING_* manualmente.
 HUGGINGFACE_TOKENIZER=BAAI/bge-m3
+
+# --- Backend graph + vector ---
 GRAPH_DATABASE_PROVIDER=kuzu
 VECTOR_DB_PROVIDER=lancedb
+
+# --- Ergonomía Cognee 1.0 ---
 ENABLE_BACKEND_ACCESS_CONTROL=false
 COGNEE_SKIP_CONNECTION_TEST=true
-# La autenticación con Ollama Cloud para modelos `:cloud` se hace vía `ollama login` (una vez).
+
+# Autenticación con Ollama Cloud para modelos `:cloud` se hace una vez vía `ollama login`.
 ```
 
 **Gestión de secretos (heredada del ADR 0001 sec. 2.4, sigue vigente):**

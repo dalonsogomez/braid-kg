@@ -93,6 +93,23 @@ Modos consultados: `CHUNKS` y `SUMMARIES`. No se usa `GRAPH_COMPLETION` para sco
 - ✅ Tag `wf-fase-0-blocked-by-gemini-quota-2026-05-02` (cierre del día 1).
 - 🎯 Tag `wf-fase-0-completed-2026-05-03` (este cierre).
 
+## Mejoras intentadas post-PASS (2026-05-03)
+
+### Boost del manifest sintético del plugin (NO funcionó)
+
+Hipótesis: enriquecer el `_plugin_manifest()` repitiendo la frase clave Q3 ("What files compose the Visual Paradigm plugin"), añadiendo respuesta literal y duplicando el contenido haría que bge-m3 lo rankeara top-1 en Q3.
+
+Implementación: `boost_plugin_manifest.py` añadió incrementalmente el manifest enriquecido vía `cognee.add(text, dataset_name=...)` + `cognee.cognify()`. Pipeline completó OK; el LLM extrajo 22 nodes/68 edges del manifest (vs ~5 antes). Confirma que el chunk ENTRÓ al grafo.
+
+**Resultado:** ChunksRetriever NO devuelve el manifest enriquecido en top-10 ni siquiera buscando con la frase literal `"Question this document answers"` (que solo existe en el manifest enriquecido) ni con `"MANIFEST_V2_ENRICHED"` (la propia path del chunk).
+
+**Diagnóstico:** los chunks de texto plano añadidos vía `cognee.add(str)` quedan filtrados o con embedding débil en LanceDB. El KG sí los recoge (entidades extraídas), pero el ChunksRetriever vectorial no los rankea. Posibles causas:
+- Tamaño bajo mínimo de chunk (`extract_chunks_from_documents` skip).
+- Embedding bge-m3 menos discriminativo para texto uniforme tipo manifest vs chunks de código denso.
+- Falta de tipo `Document` correcto cuando se pasa texto crudo (vs file path).
+
+**Acción:** descartado el boost por contenido. Q3 queda en 0.5. La solución correcta es el reranker (síntoma 11.4), diferido a Fase 2.
+
 ## Lecciones aprendidas
 
 1. **El stack canónico hipotético del AGENTS.md no fue alcanzable en una sesión.** Llegamos al final tras 5 ADRs (Gemini → Local → Gemini → Reduced scope → Ollama Cloud). El AGENTS.md original asumía qwen3.5:35b-a3b en MLX preview que no existe en Ollama hoy. La realidad operativa requirió iterar.

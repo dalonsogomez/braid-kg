@@ -8,7 +8,8 @@
 - [ADR 0002 — Pivote a stack local + Kuzu](decisions/0002-pivote-stack-local-cognee-1-sin-networkx.md) — Status: **Superseded en parte** (Kuzu sigue vigente, mantenido por ADR 0005).
 - [ADR 0003 — Re-pivote a Gemini por bloqueo R2](decisions/0003-re-pivote-gemini-por-bloqueo-r2.md) — Status: **Superseded** por ADR 0005 (R2 vuelve y usuario confirma plan Ollama Cloud activo).
 - [ADR 0004 — Scope reducido por quota Flash](decisions/0004-scope-reducido-por-quota-flash.md) — Status: **Superseded** por ADR 0005 (sin cuota → scope completo viable).
-- [ADR 0005 — Ollama Cloud + bge-m3 + Kuzu](decisions/0005-ollama-cloud-kimi-bge-m3-local-kuzu.md) — **Stack vigente**. Status: **Active** (2026-05-03).
+- [ADR 0005 — Ollama Cloud + bge-m3 + Kuzu](decisions/0005-ollama-cloud-kimi-bge-m3-local-kuzu.md) — **Stack vigente**. Status: **Active** (2026-05-03). Su sec. 2.2 fue corregida por ADR 0006.
+- [ADR 0006 — `.env` real con dodges LiteLLM/Ollama/pydantic](decisions/0006-env-litellm-colon-dodge.md) — **Active** (2026-05-03). Sustituye sec. 13.2 de AGENTS.md y sec. 2.2 de ADR 0005.
 
 ## Planes activos
 
