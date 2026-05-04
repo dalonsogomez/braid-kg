@@ -10,7 +10,8 @@
 - [ADR 0004 — Scope reducido por quota Flash](decisions/0004-scope-reducido-por-quota-flash.md) — Status: **Superseded** por ADR 0005 (sin cuota → scope completo viable).
 - [ADR 0005 — Ollama Cloud + bge-m3 + Kuzu](decisions/0005-ollama-cloud-kimi-bge-m3-local-kuzu.md) — **Stack vigente**. Status: **Active** (2026-05-03). Su sec. 2.2 fue corregida por ADR 0006.
 - [ADR 0006 — `.env` real con dodges LiteLLM/Ollama/pydantic](decisions/0006-env-litellm-colon-dodge.md) — **Active** (2026-05-03). Sustituye sec. 13.2 de AGENTS.md y sec. 2.2 de ADR 0005.
-- [ADR 0007 — TODO centralizar cognee_system en ~/.wikiforge/cognee/](decisions/0007-todo-centralizar-cognee-system-en-wikiforge-cognee.md) — **Active** (2026-05-03). Promovido por `wikiforge promote-decision` durante demo Fase 1.
+- [ADR 0007 — Centralizar cognee_system en ~/.wikiforge/cognee/](decisions/0007-todo-centralizar-cognee-system-en-wikiforge-cognee.md) — **Resolved** (2026-05-04). Centralización vía env vars `SYSTEM_ROOT_DIRECTORY` + `DATA_ROOT_DIRECTORY` + `CACHE_ROOT_DIRECTORY` aplicadas en `wikiforge.config` y `cognee-mcp-stdio.sh`. Promovido en sesión N, resuelto en N+1.
+- [ADR 0008 — Alinear versions de cognee entre venvs](decisions/0008-alinear-versions-de-cognee-entre-venvs-wf-y-cognee-mcp.md) — **Active** (2026-05-04). TODO Fase 2: WF venv usa cognee 1.0.5 + ladybug 0.16, cognee-mcp venv usa cognee 1.0.0 + kuzu legacy — formato de archivo incompatible aunque storage esté centralizado.
 
 ## Planes activos
 
@@ -21,6 +22,7 @@
 - [Plan 0001 — Post-mortem día 1](plans/0001-fase-0-postmortem.md) — historial de los 5 pivotes hasta ADR 0005.
 - [Plan 0002 — Bootstrap Fase 1](plans/0002-fase-1-bootstrap.md) — Status: **PASS** (2026-05-03). CLI `wikiforge` funcional + 2 repos operativos + perfil global + ADR 0007 promovido.
 - [Plan 0002 — Resultados Fase 1](plans/0002-fase-1-bootstrap-results.md) — criterio de salida cumplido vía filesystem-based recall; cognee semántico diferido a Fase 2 por bugs upstream.
+- [Plan 0003 — Progresos hacia Fase 2](plans/0003-fase-2-progresos.md) — log vivo. Sesión 2026-05-04: ADR 0007 resuelto (storage centralizado + ladybug patch); ADR 0008 promovido (version skew entre venvs).
 
 ## Convenciones
 

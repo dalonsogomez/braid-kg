@@ -2,16 +2,30 @@
 
 Centraliza los env vars del .env real (sec. 13.2 de AGENTS.md tras ADR 0006) para que el CLI
 no duplique la lista en cada comando.
+
+Tras la resolución de ADR 0007 (2026-05-04), también centraliza el storage de Cognee a
+`~/.wikiforge/cognee/` para que el CLI y el MCP server compartan dataset (no más islas por venv).
 """
 from __future__ import annotations
 
 import os
+from pathlib import Path
+
+# ADR 0007 resolved: storage centralizado fuera del venv.
+WIKIFORGE_COGNEE_ROOT = Path.home() / ".wikiforge" / "cognee"
 
 
 def apply_stack_env() -> None:
     """Aplica las variables del stack vigente. NO sobreescribe lo que ya esté en environ
     (permite override desde shell o tests).
+
+    Cognee Pydantic BaseSettings auto-binds field names to uppercase env vars, así que
+    `SYSTEM_ROOT_DIRECTORY`, `DATA_ROOT_DIRECTORY` y `CACHE_ROOT_DIRECTORY` redirigen el
+    storage de cognee desde el venv hacia `~/.wikiforge/cognee/`.
     """
+    # Asegurar que el path centralizado existe antes de setearlo (Cognee falla si no).
+    WIKIFORGE_COGNEE_ROOT.mkdir(parents=True, exist_ok=True)
+
     defaults = {
         # LLM (dodge LiteLLM ':' parser via openai/ + OpenAI-compat endpoint)
         "LLM_PROVIDER": "openai",
@@ -34,6 +48,10 @@ def apply_stack_env() -> None:
         # Cognee 1.0 ergonomics
         "ENABLE_BACKEND_ACCESS_CONTROL": "false",
         "COGNEE_SKIP_CONNECTION_TEST": "true",
+        # ADR 0007 resolved: storage centralizado en ~/.wikiforge/cognee/.
+        "SYSTEM_ROOT_DIRECTORY": str(WIKIFORGE_COGNEE_ROOT / ".cognee_system"),
+        "DATA_ROOT_DIRECTORY": str(WIKIFORGE_COGNEE_ROOT / ".data_storage"),
+        "CACHE_ROOT_DIRECTORY": str(WIKIFORGE_COGNEE_ROOT / ".cognee_cache"),
     }
     for k, v in defaults.items():
         os.environ.setdefault(k, v)

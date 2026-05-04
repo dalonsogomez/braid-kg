@@ -12,9 +12,26 @@ from .config import apply_stack_env
 from .paths import load_secrets_into_env
 
 
+def _patch_ladybug_version_mapping() -> None:
+    """Cognee 1.0.5 ships con `ladybug_version_mapping` que solo conoce hasta version_code 39
+    (Kuzu 0.11.3). Cuando ladybug 0.15+ escribe el on-disk format, usa codes 40+ que el mapping
+    no resuelve y `read_ladybug_storage_version` lanza `ValueError`. Workaround: extender el
+    mapping en runtime con los códigos observados de ladybug 0.16.x.
+
+    Cuando Cognee >=1.1 actualice el mapping upstream, este patch puede eliminarse.
+    """
+    try:
+        from cognee.infrastructure.databases.graph.ladybug import ladybug_migrate as _lm  # type: ignore
+        _lm.ladybug_version_mapping.setdefault(40, "0.16.0")
+        _lm.ladybug_version_mapping.setdefault(41, "0.16.1")
+    except ImportError:
+        pass  # ladybug no instalado — no debería pasar con cognee 1.0.5+ pero defensivo
+
+
 def _ensure_env() -> None:
     load_secrets_into_env()
     apply_stack_env()
+    _patch_ladybug_version_mapping()
 
 
 async def add_inputs(inputs: list[str], dataset: str) -> None:

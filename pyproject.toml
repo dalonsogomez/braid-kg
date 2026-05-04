@@ -12,13 +12,16 @@ dependencies = []
 wikiforge = "wikiforge.cli:main"
 
 [project.optional-dependencies]
-# Stack ADR 0005 + ADR 0006. Instalar con `uv pip install -e ".[cognee]"`.
-# Versiones pinneadas a las verificadas durante Fase 1 (2026-05-03):
+# Stack ADR 0005 + ADR 0006 (con dodge ladybug del ADR 0007).
+# Instalar con `uv pip install -e ".[cognee]"`.
+# Versiones pinneadas a las verificadas durante Fase 1/2 (2026-05-03/04):
 cognee = [
     "cognee>=1.0.5,<1.1",
     "transformers>=5.7,<6",
     "kuzu>=0.11,<0.12",
-    "lancedb>=0.27",
+    "ladybug>=0.16,<0.17",   # rebrand de Kuzu post-Apple; cognee 1.0.5 lo importa hardcoded
+    "lancedb>=0.29,<0.30",   # 0.29.2 verificado; 0.30+ rompe lance_namespace
+    "pylance<=0.36.0",       # constraint de cognee
 ]
 
 [build-system]
