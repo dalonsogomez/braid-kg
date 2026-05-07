@@ -11,7 +11,7 @@
 - [ADR 0005 — Ollama Cloud + bge-m3 + Kuzu](decisions/0005-ollama-cloud-kimi-bge-m3-local-kuzu.md) — **Stack vigente**. Status: **Active** (2026-05-03). Su sec. 2.2 fue corregida por ADR 0006.
 - [ADR 0006 — `.env` real con dodges LiteLLM/Ollama/pydantic](decisions/0006-env-litellm-colon-dodge.md) — **Active** (2026-05-03). Sustituye sec. 13.2 de AGENTS.md y sec. 2.2 de ADR 0005.
 - [ADR 0007 — Centralizar cognee_system en ~/.wikiforge/cognee/](decisions/0007-todo-centralizar-cognee-system-en-wikiforge-cognee.md) — **Resolved** (2026-05-04). Centralización vía env vars `SYSTEM_ROOT_DIRECTORY` + `DATA_ROOT_DIRECTORY` + `CACHE_ROOT_DIRECTORY` aplicadas en `wikiforge.config` y `cognee-mcp-stdio.sh`. Promovido en sesión N, resuelto en N+1.
-- [ADR 0008 — Alinear versions de cognee entre venvs](decisions/0008-alinear-versions-de-cognee-entre-venvs-wf-y-cognee-mcp.md) — **Active** (2026-05-04). TODO Fase 2: WF venv usa cognee 1.0.5 + ladybug 0.16, cognee-mcp venv usa cognee 1.0.0 + kuzu legacy — formato de archivo incompatible aunque storage esté centralizado.
+- [ADR 0008 — Alinear versions de cognee entre venvs](decisions/0008-alinear-versions-de-cognee-entre-venvs-wf-y-cognee-mcp.md) — **Resolved** (2026-05-07). Ambos venvs ahora usan ladybug 0.16.1 + patch del version mapping; cognee-mcp upgrade a 1.0.8 vía edit del pyproject + `uv lock --upgrade-package cognee`. Cross-venv recall validado end-to-end.
 
 ## Planes activos
 
