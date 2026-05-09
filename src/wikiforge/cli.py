@@ -14,6 +14,7 @@ from .commands import ask as ask_cmd
 from .commands import index as index_cmd
 from .commands import init as init_cmd
 from .commands import promote as promote_cmd
+from .commands import review as review_cmd
 from .commands import sync as sync_cmd
 
 
@@ -53,7 +54,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_sy = sub.add_parser("sync", help="reescanear `.kg/` y reconciliar (alias de index incremental)")
 
-    p_ev = sub.add_parser("eval", help="(stub) suite de preguntas → métricas")
+    # ADR 0010 — suite eval real (ya no stub)
+    p_ev = sub.add_parser("eval", help="ejecuta suite de preguntas y mide grounding/alucinación (ADR 0010)")
+    p_ev.add_argument("--questions", default=None, help="path al questions.json (default .memory/eval/questions.json)")
+    p_ev.add_argument("--top-k", type=int, default=None, help="override top_k del scoring")
+    p_ev.add_argument("--no-save", dest="save", action="store_false", help="no escribir run JSON al filesystem")
+    p_ev.add_argument("--per-question-timeout", type=float, default=None, help="timeout en segundos por search; default 90s")
+
+    p_rev = sub.add_parser("review", help="revisar código con 3 modelos AI en paralelo vía ZenMux")
+    p_rev.add_argument("prompt", help="código o diff a revisar")
+    p_rev.add_argument("--system-prompt", help="rol del revisor (default: revisor experto)")
+    p_rev.add_argument("--models", help="modelos separados por coma (default: los 3 canónicos)")
+    p_rev.add_argument("--temperature", type=float, default=0.0, help="temperatura (default 0.0)")
+    p_rev.add_argument("--max-tokens", type=int, default=4096, help="máximo tokens de salida (default 4096)")
 
     p_wiki = sub.add_parser("wiki", help="(stub Mes 2+) generar wiki publicable")
     p_wiki.add_argument("subcmd", choices=["build"])
@@ -104,11 +117,25 @@ def main(argv: list[str] | None = None) -> int:
         from .commands import claude as claude_cmd
         return claude_cmd.run_init(remove=args.remove)
     if cmd == "eval":
-        print("[wikiforge eval] stub — Fase 2 deliverable; usar `validate_phase0.py` mientras tanto", file=sys.stderr)
-        return 1
+        from .commands import eval as eval_cmd
+        return eval_cmd.run(
+            questions_path=args.questions,
+            top_k=args.top_k,
+            save=args.save,
+            per_question_timeout=args.per_question_timeout,
+        )
     if cmd == "wiki":
         print("[wikiforge wiki build] stub — Mes 2+; ver AGENTS.md sec. 7", file=sys.stderr)
         return 1
+    if cmd == "review":
+        models = args.models.split(",") if args.models else None
+        return review_cmd.run(
+            prompt=args.prompt,
+            system_prompt=args.system_prompt,
+            models=models,
+            temperature=args.temperature,
+            max_tokens=args.max_tokens,
+        )
 
     print(f"unknown command: {cmd}", file=sys.stderr)
     return 2

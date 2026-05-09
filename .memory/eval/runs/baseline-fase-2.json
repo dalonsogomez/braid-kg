@@ -1,0 +1,138 @@
+{
+  "timestamp": "2026-05-09T10-20-56Z",
+  "dataset_id": "WikiForge",
+  "stack": {
+    "llm": "kimi-k2.6:cloud",
+    "embedder": "bge-m3",
+    "graph_backend": "kuzu",
+    "vector_backend": "lancedb"
+  },
+  "questions": [
+    {
+      "id": "Q01",
+      "kind": "CONTAINS",
+      "score": 0.0,
+      "rationale": "any_of: no match in top-K; top_1: no match",
+      "top_1_path": "[FILE kind=doc path=AGENTS.md]",
+      "search_results_count": {
+        "CHUNKS": 5,
+        "SUMMARIES": 5
+      }
+    },
+    {
+      "id": "Q02",
+      "kind": "DOCUMENTS",
+      "score": 0.0,
+      "rationale": "any_of: no match in top-K; top_1: no match",
+      "top_1_path": "[FILE kind=doc path=.memory/MEMORY.md]",
+      "search_results_count": {
+        "CHUNKS": 5,
+        "SUMMARIES": 5
+      }
+    },
+    {
+      "id": "Q03",
+      "kind": "DOCUMENTS",
+      "score": 1.0,
+      "rationale": "any_of matched: ['0006-env-litellm-colon-dodge', 'LiteLLM', 'OllamaEmbeddingEngine']; top_1 matched: ['0006-env-litellm-colon-dodge.md']",
+      "top_1_path": "[FILE kind=doc path=.memory/decisions/0006-env-litellm-colon-dodge.md]",
+      "search_results_count": {
+        "CHUNKS": 5,
+        "SUMMARIES": 5
+      }
+    },
+    {
+      "id": "Q04",
+      "kind": "MENTIONS",
+      "score": 1.0,
+      "rationale": "any_of matched: ['anti-patrón', 'autorización', 'privacidad']; top_1 matched: ['AGENTS.md']",
+      "top_1_path": null,
+      "search_results_count": {
+        "CHUNKS": 5,
+        "SUMMARIES": 5
+      }
+    },
+    {
+      "id": "Q05",
+      "kind": "MENTIONS",
+      "score": 1.0,
+      "rationale": "any_of matched: ['4.3', 'cwd', 'git root']; top_1 matched: ['AGENTS.md']",
+      "top_1_path": "[FILE kind=doc path=AGENTS.md]",
+      "search_results_count": {
+        "CHUNKS": 5,
+        "SUMMARIES": 5
+      }
+    },
+    {
+      "id": "Q06",
+      "kind": "CONTAINS",
+      "score": 0.5,
+      "rationale": "any_of matched: ['runner.py']; top_1: no match",
+      "top_1_path": "[FILE kind=doc path=.memory/decisions/0006-env-litellm-colon-dodge.md]",
+      "search_results_count": {
+        "CHUNKS": 5,
+        "SUMMARIES": 5
+      }
+    },
+    {
+      "id": "Q07",
+      "kind": "IMPORTS",
+      "score": 0.5,
+      "rationale": "any_of matched: ['paths']; top_1: no match",
+      "top_1_path": "[FILE kind=doc path=.memory/plans/0002-fase-1-bootstrap.md]",
+      "search_results_count": {
+        "CHUNKS": 5,
+        "SUMMARIES": 5
+      }
+    },
+    {
+      "id": "Q08",
+      "kind": "DOCUMENTS",
+      "score": 0.0,
+      "rationale": "any_of: no match in top-K; top_1: no match",
+      "top_1_path": "[FILE kind=doc path=.memory/decisions/0006-env-litellm-colon-dodge.md]",
+      "search_results_count": {
+        "CHUNKS": 5,
+        "SUMMARIES": 5
+      }
+    },
+    {
+      "id": "Q09",
+      "kind": "DOCUMENTS",
+      "score": 1.0,
+      "rationale": "any_of matched: ['0005', 'kimi-k2.6:cloud', 'bge-m3']; top_1 matched: ['0005-ollama-cloud-kimi-bge-m3-local-kuzu.md']",
+      "top_1_path": "[FILE kind=doc path=.memory/MEMORY.md]",
+      "search_results_count": {
+        "CHUNKS": 5,
+        "SUMMARIES": 5
+      }
+    },
+    {
+      "id": "Q10",
+      "kind": "CONTAINS",
+      "score": 0.5,
+      "rationale": "any_of matched: ['idempotente']; top_1: no match",
+      "top_1_path": "[FILE kind=doc path=AGENTS.md]",
+      "search_results_count": {
+        "CHUNKS": 5,
+        "SUMMARIES": 5
+      }
+    }
+  ],
+  "total": 5.5,
+  "max": 10.0,
+  "pct": 55.0,
+  "recall_at_1": 0.4,
+  "recall_at_k": 0.7,
+  "meta": {
+    "root": "/Users/dalonsogomez/Developer/claude/code-projects/WikiForge",
+    "questions_path": "/Users/dalonsogomez/Developer/claude/code-projects/WikiForge/.memory/eval/questions.json",
+    "search_types": [
+      "CHUNKS",
+      "SUMMARIES"
+    ],
+    "top_k": 10,
+    "elapsed_seconds": 7.4,
+    "questions_suite_version": 1
+  }
+}

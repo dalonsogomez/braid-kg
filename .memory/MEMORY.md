@@ -13,6 +13,8 @@
 - [ADR 0007 — Centralizar cognee_system en ~/.wikiforge/cognee/](decisions/0007-todo-centralizar-cognee-system-en-wikiforge-cognee.md) — **Resolved** (2026-05-04). Centralización vía env vars `SYSTEM_ROOT_DIRECTORY` + `DATA_ROOT_DIRECTORY` + `CACHE_ROOT_DIRECTORY` aplicadas en `wikiforge.config` y `cognee-mcp-stdio.sh`. Promovido en sesión N, resuelto en N+1.
 - [ADR 0008 — Alinear versions de cognee entre venvs](decisions/0008-alinear-versions-de-cognee-entre-venvs-wf-y-cognee-mcp.md) — **Resolved** (2026-05-07). Ambos venvs ahora usan ladybug 0.16.1 + patch del version mapping; cognee-mcp upgrade a 1.0.8 vía edit del pyproject + `uv lock --upgrade-package cognee`. Cross-venv recall validado end-to-end.
 - [ADR 0009 — Auto-bootstrap RAG vía SessionStart hook](decisions/0009-auto-bootstrap-rag-via-session-hook.md) — **Active** (2026-05-09). Comando `claude-session-start` (<500 ms, sin LLM) reporta estado memoria a cada inicio de sesión Claude Code; `claude-init` cablea hook idempotente; `sync` incremental por mtime + timeout 120s mitiga cleanup hang upstream.
+- [ADR 0010 — Suite `wikiforge eval`](decisions/0010-suite-wikiforge-eval.md) — **Active** (2026-05-09). Comando `wikiforge eval` operativo (ya no stub); 10 preguntas en `.memory/eval/questions.json`; scoring por substring + recall@1/recall@K; runs guardados en `.memory/eval/runs/`. Cumple criterio AGENTS.md sec. 10 Fase 2.
+- [ADR 0011 — Reranker bge-reranker-v2-m3](decisions/0011-reranker-bge-v2-m3.md) — **Proposed** (2026-05-09). Activación pendiente de cierre síntoma 11.8 (Ollama Cloud caído). Plan 0006 lo retoma cuando 11.8 cierre.
 
 ## Planes activos
 
@@ -25,6 +27,8 @@
 - [Plan 0002 — Resultados Fase 1](plans/0002-fase-1-bootstrap-results.md) — criterio de salida cumplido vía filesystem-based recall; cognee semántico diferido a Fase 2 por bugs upstream.
 - [Plan 0003 — Progresos hacia Fase 2](plans/0003-fase-2-progresos.md) — log vivo. Sesión 2026-05-04: ADR 0007 resuelto (storage centralizado + ladybug patch); ADR 0008 promovido (version skew entre venvs); 2026-05-09: ADR 0009 (auto-bootstrap RAG); cleanup async hang **mitigado** vía `asyncio.wait_for(timeout=120)` en `runner.cognify`.
 - [Plan 0004 — Auto-bootstrap RAG](plans/0004-auto-bootstrap-rag.md) — Status: **PASS** (2026-05-09). `claude-session-start` p50=250ms, `claude-init` idempotente, `sync` at-rest 0.41s, dogfooding activo en `.claude/settings.json` del repo.
+- [Plan 0005 — Suite `wikiforge eval` + baseline Fase 2](plans/0005-wikiforge-eval-baseline.md) — Status: **PASS criterio sec. 10** (2026-05-09). Baseline `5.5/10` (recall@1=0.40, recall@K=0.70) registrado en `.memory/eval/runs/baseline-fase-2.json` contra dataset parcial. Reindex completo bloqueado por síntoma 11.8 activo (Ollama Cloud caído).
+- [Plan 0006 — Activación reranker](plans/0006-reranker-activation.md) — Status: **Blocked** (2026-05-09). ADR 0011 Proposed; activación pendiente de cierre síntoma 11.8.
 
 ## Convenciones
 

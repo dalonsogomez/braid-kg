@@ -62,10 +62,11 @@ cognee no idéntico (1.0.5 vs 1.0.8) pero ladybug sí — la pieza crítica para
 ## TODOs abiertos para Fase 2 (orden por prioridad)
 
 1. ~~**ADR 0008**~~ ✅ Resuelto 2026-05-07.
-2. ~~**Cognee cleanup async hang**~~ ✅ **Mitigado** 2026-05-09 (ADR 0009): `asyncio.wait_for(timeout=120)` envuelve `cognify` en `runner.py`. Root cause sigue abierto upstream pero el CLI ya no se cuelga.
-3. **Reranker** — síntoma 11.4 medido en Fase 0 (Q2/Q3 a 0.5 por falta). Activar `bge-reranker-v2-m3` o `qwen3-reranker-4b`. Requiere ADR autorizando la nueva dep.
-4. **Suite `wikiforge eval`** — entregable Fase 2 según plan original.
-5. **PR upstream a cognee** — relajar el `cognee==1.0.0` strict pin del cognee-mcp para no requerir el hack del pyproject.
+2. ~~**Cognee cleanup async hang**~~ ✅ **Mitigado** 2026-05-09 (ADR 0009): `asyncio.wait_for(timeout=120)` envuelve `cognify` en `runner.py`.
+3. **Reranker** ⏳ **Bloqueado por síntoma 11.8** — ADR 0011 escrito (Proposed), plan 0006 escrito. Activación pendiente de reindex completo, que requiere Ollama Cloud funcional.
+4. ~~**Suite `wikiforge eval`**~~ ✅ **Resuelto** 2026-05-09 (ADR 0010): comando `wikiforge eval` operativo, 10 preguntas en `.memory/eval/questions.json`, baseline registrado en `.memory/eval/runs/baseline-fase-2.json` = 5.5/10 contra dataset parcial.
+5. **PR upstream a cognee** — relajar el `cognee==1.0.0` strict pin del cognee-mcp para no requerir el hack del pyproject. Sin urgencia.
+6. **NUEVO — Síntoma 11.8 activo: Ollama Cloud caído.** Verificado 2026-05-09 12:18: `curl -m 30 /v1/chat/completions` con `kimi-k2.6:cloud` → timeout sin response. Reindex completo del repo bloqueado. Aplicar contingencia AGENTS.md sec. 11.8 (reversión a `qwen3:30b` local) si persiste >24h. Próxima sesión debe verificar estado primero.
 
 ## 2026-05-09
 
@@ -108,3 +109,33 @@ p50 del hook: **~250 ms** (lectura completa de globs); ~55 ms cuando no hay `las
 - **Auto-cleanup en `claude-init --remove`**: si el archivo `.claude/settings.json` queda con un objeto vacío `{}` tras quitar el hook, se borra el archivo. Evita basura.
 - **`last_index.json` no detecta archivos borrados**, solo modificados/añadidos. Aceptado: `wikiforge index --rebuild` lo reconcilia cuando moleste.
 - **Symlink global necesario** — `wikiforge` no estaba en el PATH global (vivía sólo en `<repo>/.venv/bin/`). El hook se ejecuta sin venv activado. Solución: `ln -sf <repo>/.venv/bin/wikiforge ~/.local/bin/wikiforge`. Reversible y documentado en ADR 0009. La ruta de producción será `uv tool install` o `pipx install -e .`.
+
+### Resolución entregables Fase 2 (criterio sec. 10)
+
+**Promovido y resuelto:** sesión 2026-05-09 (mismo día — entrega completa Fase 2 sin esperar más sesiones).
+
+#### Implementación
+
+1. `.memory/decisions/0010-suite-wikiforge-eval.md` — ADR formato suite eval.
+2. `src/wikiforge/commands/eval.py` (nuevo, ~250 líneas) — comando real que reemplaza el stub. Incluye:
+   - `_extract_text` defensivo ante None/list/dict/object
+   - Validación temprana de `questions.json` (KeyError prevenido)
+   - Captura `JSONDecodeError` + `OSError`
+   - `_search_with_timeout` por pregunta (default 90s) — pregunta colgada no bloquea suite
+   - Fallback a stdout si `_save_run` falla por filesystem read-only
+   - Bonus `exact_top_1_bonus` configurable desde JSON
+   - Extracción de `top_1_path` del header `[FILE kind=... path=...]` inyectado por `annotate_file`
+3. `src/wikiforge/cli.py` — eval ya no es stub; flags `--questions`, `--top-k`, `--no-save`, `--per-question-timeout`.
+4. `.memory/eval/questions.json` — 10 preguntas WikiForge con ground truth (cubre CONTAINS, DOCUMENTS, MENTIONS, IMPORTS — los 4 tipos relevantes para repo Python solo; CALLS/IMPORTS solapan).
+5. `.memory/eval/runs/baseline-fase-2.json` — baseline 5.5/10 (55%, recall@1=0.40, recall@K=0.70) registrado contra dataset parcial.
+
+#### Reviews independientes (subagents)
+
+- **Spec compliance:** APROBADO_CON_OBSERVACIONES. 2 importantes (top_1_path no path real, exact_top_1_bonus hardcoded), 4 cosméticas. Todas aplicadas.
+- **Code quality:** APROBADO_CON_FIXES_OPCIONALES. 5 importantes (validación temprana, timeout, OSError fallback, JSONDecodeError, _extract_text con None/list). Todas aplicadas.
+
+#### Hallazgos secundarios
+
+- **Síntoma 11.8 activo** — Ollama Cloud `kimi-k2.6:cloud` caído (timeout 30s). Reindex completo bloqueado. Snapshot dataset parcial restaurado para preservar baseline. Plan 0006 sec. A2 prevé reversión a `qwen3:30b` local.
+- **ADR 0011 (Proposed)** — Reranker `bge-reranker-v2-m3` documentado pero sin implementar. Razón: validar el delta requiere reindex completo (bloqueado por 11.8). Plan 0006 lo retoma cuando 11.8 cierre.
+- **Reindex `--rebuild` NO borra `.data_storage/text_*.txt`** — solo limpia tablas y grafo. Esto permitió restaurar el dataset parcial vía simple `cp -R` desde snapshot. Útil saberlo para futuras operaciones destructivas.

@@ -184,7 +184,7 @@ El CLI es deliberadamente pequeño. Hace pocas cosas y las hace bien. Cualquier 
 | `wikiforge promote-to-global "<texto>"` | Promueve proyecto → global. Solo si el texto aplica cross-proyectos. |
 | `wikiforge demote --id <decision_id>` | Revierte una promoción indebida. |
 | `wikiforge sync` | Reescanea `.kg/` y reconcilia con el sistema de archivos (útil tras git pull). Incremental real por `mtime` desde ADR 0009: at-rest exit 0 sin invocar el LLM. |
-| `wikiforge eval` | Ejecuta una suite mínima de 10-20 preguntas reales del repo y mide grounding y alucinación. Es la herramienta para validar regresiones. |
+| `wikiforge eval` | (ADR 0010) Ejecuta `.memory/eval/questions.json` (10-20 preguntas con ground truth). Scoring por substring + recall@1 + recall@K. Run JSON guardado en `.memory/eval/runs/<ISO>.json`. Flags: `--questions`, `--top-k`, `--no-save`, `--per-question-timeout`. Herramienta canónica para validar regresiones y para activar/desactivar síntomas sec. 11.4 / 11.10. |
 | `wikiforge wiki build` | (Mes 2+) Genera Markdown desde Cognee y compila Astro Starlight. |
 | `wikiforge claude-session-start` | (ADR 0009) Subcomando de hook. Lee filesystem, reporta estado de memoria del repo activo en una línea (al día / stale / no inicializado / no-repo) en p50 ≈ 250 ms. **No llama al LLM ni crea `.kg/`.** Soporta `--json`. Su stdout entra en el contexto de Claude Code (sec. 4 schema oficial Anthropic). |
 | `wikiforge claude-init` | (ADR 0009) Cablea hook `SessionStart` (matchers `startup\|resume\|clear\|compact`, `timeout: 5s`, `statusMessage`) en `<git_root>/.claude/settings.json`. Idempotente; preserva otras claves (`permissions`, `env`, otros hooks). `--remove` lo desinstala. |

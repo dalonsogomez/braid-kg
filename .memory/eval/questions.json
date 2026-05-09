@@ -1,0 +1,174 @@
+{
+  "version": 1,
+  "dataset_id": "WikiForge",
+  "scoring": {
+    "match": "substring",
+    "search_types": ["CHUNKS", "SUMMARIES"],
+    "top_k": 10,
+    "exact_top_1_bonus": 0.5
+  },
+  "questions": [
+    {
+      "id": "Q01",
+      "kind": "CONTAINS",
+      "query": "¿Qué hace la función run_session_start del CLI wikiforge? ¿Qué imprime cuando el repo no está inicializado?",
+      "expected_any_of": [
+        "claude.py",
+        "claude-session-start",
+        "repo no inicializado",
+        "[WikiForge]"
+      ],
+      "expected_top_1": [
+        "src/wikiforge/commands/claude.py"
+      ],
+      "notes": "Símbolo nuevo del CLI introducido por ADR 0009."
+    },
+    {
+      "id": "Q02",
+      "kind": "DOCUMENTS",
+      "query": "¿Qué decisión documenta el ADR 0009? ¿Qué hook configura?",
+      "expected_any_of": [
+        "0009-auto-bootstrap-rag",
+        "SessionStart",
+        "claude-session-start",
+        "auto-bootstrap RAG"
+      ],
+      "expected_top_1": [
+        "0009-auto-bootstrap-rag-via-session-hook.md"
+      ],
+      "notes": "ADR principal de la sesión 2026-05-09."
+    },
+    {
+      "id": "Q03",
+      "kind": "DOCUMENTS",
+      "query": "¿Qué tres dodges de upstream documenta el ADR 0006 sobre el .env de cognee-mcp?",
+      "expected_any_of": [
+        "0006-env-litellm-colon-dodge",
+        "LiteLLM",
+        "OllamaEmbeddingEngine",
+        "HUGGINGFACE_TOKENIZER",
+        "pydantic"
+      ],
+      "expected_top_1": [
+        "0006-env-litellm-colon-dodge.md"
+      ],
+      "notes": "ADR central del stack vigente."
+    },
+    {
+      "id": "Q04",
+      "kind": "MENTIONS",
+      "query": "¿Cuál es la regla del proyecto sobre privacidad de ingesta cloud? ¿Es opt-in u opt-out?",
+      "expected_any_of": [
+        "9.7",
+        "anti-patrón",
+        "autorización",
+        "privacidad",
+        "documentos privados a APIs cloud"
+      ],
+      "expected_top_1": [
+        "AGENTS.md"
+      ],
+      "notes": "Sec. 9.7 de AGENTS.md — pieza clave del contrato."
+    },
+    {
+      "id": "Q05",
+      "kind": "MENTIONS",
+      "query": "¿Cómo resuelve WikiForge el contexto de proyecto activo? ¿En qué orden busca?",
+      "expected_any_of": [
+        "4.3",
+        "cwd",
+        "git root",
+        ".kgconfig",
+        "fallback_threshold",
+        "perfil global"
+      ],
+      "expected_top_1": [
+        "AGENTS.md"
+      ],
+      "notes": "Sec. 4.3 — algoritmo central."
+    },
+    {
+      "id": "Q06",
+      "kind": "CONTAINS",
+      "query": "¿Qué función envuelve cognify con timeout para mitigar el cleanup async hang? ¿Cuántos segundos?",
+      "expected_any_of": [
+        "asyncio.wait_for",
+        "120",
+        "runner.py",
+        "cleanup hang",
+        "TimeoutError"
+      ],
+      "expected_top_1": [
+        "src/wikiforge/runner.py"
+      ],
+      "notes": "Mitigación TODO #2 plan 0003 → ADR 0009."
+    },
+    {
+      "id": "Q07",
+      "kind": "IMPORTS",
+      "query": "¿Qué archivos del paquete wikiforge importan find_git_root desde el módulo paths?",
+      "expected_any_of": [
+        "find_git_root",
+        "paths",
+        "commands/init.py",
+        "commands/claude.py",
+        "commands/index.py"
+      ],
+      "expected_top_1": [
+        "src/wikiforge/commands/"
+      ],
+      "notes": "Relación IMPORTS/CALLS — paths.find_git_root es callsite múltiple."
+    },
+    {
+      "id": "Q08",
+      "kind": "DOCUMENTS",
+      "query": "¿Cómo se cerró el TODO #2 del plan Fase 2 sobre el cleanup async hang de cognee 1.0.5?",
+      "expected_any_of": [
+        "TODO #2",
+        "Mitigado",
+        "asyncio.wait_for",
+        "120",
+        "cleanup async hang",
+        "0003-fase-2-progresos"
+      ],
+      "expected_top_1": [
+        "0003-fase-2-progresos.md"
+      ],
+      "notes": "Plan 0003 con cierre del TODO."
+    },
+    {
+      "id": "Q09",
+      "kind": "DOCUMENTS",
+      "query": "¿Qué stack canónico usa WikiForge para LLM y embeddings? Cita el ADR vigente.",
+      "expected_any_of": [
+        "0005",
+        "kimi-k2.6:cloud",
+        "bge-m3",
+        "Kuzu",
+        "LanceDB",
+        "Ollama Cloud"
+      ],
+      "expected_top_1": [
+        "0005-ollama-cloud-kimi-bge-m3-local-kuzu.md"
+      ],
+      "notes": "ADR 0005 = stack actual. AGENTS.md sec. 3 también lo lista."
+    },
+    {
+      "id": "Q10",
+      "kind": "CONTAINS",
+      "query": "¿Qué subcomando de wikiforge cablea hooks SessionStart en el settings.json del git_root y es idempotente?",
+      "expected_any_of": [
+        "claude-init",
+        "claude.py",
+        "_hook_entry",
+        "settings.json",
+        "idempotente",
+        "matcher"
+      ],
+      "expected_top_1": [
+        "src/wikiforge/commands/claude.py"
+      ],
+      "notes": "Comando complementario del Q01 — hook installer."
+    }
+  ]
+}

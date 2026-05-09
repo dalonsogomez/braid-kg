@@ -6,7 +6,10 @@ readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Daniel Alonso Gómez", email = "daniel@dalonsogomez.com" }]
 license = { text = "MIT" }
-dependencies = []
+dependencies = [
+    "openai>=1.68,<2",
+    "httpx>=0.28,<1",
+]
 
 [project.scripts]
 wikiforge = "wikiforge.cli:main"
