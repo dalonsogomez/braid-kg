@@ -12,6 +12,7 @@
 - [ADR 0006 — `.env` real con dodges LiteLLM/Ollama/pydantic](decisions/0006-env-litellm-colon-dodge.md) — **Active** (2026-05-03). Sustituye sec. 13.2 de AGENTS.md y sec. 2.2 de ADR 0005.
 - [ADR 0007 — Centralizar cognee_system en ~/.wikiforge/cognee/](decisions/0007-todo-centralizar-cognee-system-en-wikiforge-cognee.md) — **Resolved** (2026-05-04). Centralización vía env vars `SYSTEM_ROOT_DIRECTORY` + `DATA_ROOT_DIRECTORY` + `CACHE_ROOT_DIRECTORY` aplicadas en `wikiforge.config` y `cognee-mcp-stdio.sh`. Promovido en sesión N, resuelto en N+1.
 - [ADR 0008 — Alinear versions de cognee entre venvs](decisions/0008-alinear-versions-de-cognee-entre-venvs-wf-y-cognee-mcp.md) — **Resolved** (2026-05-07). Ambos venvs ahora usan ladybug 0.16.1 + patch del version mapping; cognee-mcp upgrade a 1.0.8 vía edit del pyproject + `uv lock --upgrade-package cognee`. Cross-venv recall validado end-to-end.
+- [ADR 0009 — Auto-bootstrap RAG vía SessionStart hook](decisions/0009-auto-bootstrap-rag-via-session-hook.md) — **Active** (2026-05-09). Comando `claude-session-start` (<500 ms, sin LLM) reporta estado memoria a cada inicio de sesión Claude Code; `claude-init` cablea hook idempotente; `sync` incremental por mtime + timeout 120s mitiga cleanup hang upstream.
 
 ## Planes activos
 
@@ -22,7 +23,8 @@
 - [Plan 0001 — Post-mortem día 1](plans/0001-fase-0-postmortem.md) — historial de los 5 pivotes hasta ADR 0005.
 - [Plan 0002 — Bootstrap Fase 1](plans/0002-fase-1-bootstrap.md) — Status: **PASS** (2026-05-03). CLI `wikiforge` funcional + 2 repos operativos + perfil global + ADR 0007 promovido.
 - [Plan 0002 — Resultados Fase 1](plans/0002-fase-1-bootstrap-results.md) — criterio de salida cumplido vía filesystem-based recall; cognee semántico diferido a Fase 2 por bugs upstream.
-- [Plan 0003 — Progresos hacia Fase 2](plans/0003-fase-2-progresos.md) — log vivo. Sesión 2026-05-04: ADR 0007 resuelto (storage centralizado + ladybug patch); ADR 0008 promovido (version skew entre venvs).
+- [Plan 0003 — Progresos hacia Fase 2](plans/0003-fase-2-progresos.md) — log vivo. Sesión 2026-05-04: ADR 0007 resuelto (storage centralizado + ladybug patch); ADR 0008 promovido (version skew entre venvs); 2026-05-09: ADR 0009 (auto-bootstrap RAG); cleanup async hang **mitigado** vía `asyncio.wait_for(timeout=120)` en `runner.cognify`.
+- [Plan 0004 — Auto-bootstrap RAG](plans/0004-auto-bootstrap-rag.md) — Status: **PASS** (2026-05-09). `claude-session-start` p50=250ms, `claude-init` idempotente, `sync` at-rest 0.41s, dogfooding activo en `.claude/settings.json` del repo.
 
 ## Convenciones
 

@@ -40,10 +40,24 @@ async def add_inputs(inputs: list[str], dataset: str) -> None:
     await cognee.add(inputs, dataset_name=dataset)
 
 
-async def cognify(dataset: str) -> None:
+async def cognify(dataset: str, timeout: float = 120.0) -> None:
+    """Wrapper sobre cognee.cognify.
+
+    ADR 0009: Cognee 1.0.5 cuelga en cleanup async tras 'Pipeline run completed'
+    (TODO Fase 2 #2 plan 0003). Envolvemos con asyncio.wait_for para que el
+    cleanup hang no bloquee al CLI indefinidamente — los datos quedan íntegros
+    porque el hang ocurre tras la escritura.
+    """
     _ensure_env()
     import cognee  # noqa: PLC0415
-    await cognee.cognify(datasets=[dataset])
+    try:
+        await asyncio.wait_for(cognee.cognify(datasets=[dataset]), timeout=timeout)
+    except asyncio.TimeoutError:
+        # Mitigación documentada en ADR 0009. Datos íntegros.
+        print(
+            f"[wikiforge runner] cognify timeout tras {timeout:.0f}s "
+            "(cleanup hang upstream cognee 1.0.5) — datos íntegros"
+        )
 
 
 async def search(query: str, dataset: str, search_type: str = "CHUNKS", top_k: int = 10) -> list[Any]:
@@ -67,8 +81,8 @@ def run_add(inputs: list[str], dataset: str) -> None:
     asyncio.run(add_inputs(inputs, dataset))
 
 
-def run_cognify(dataset: str) -> None:
-    asyncio.run(cognify(dataset))
+def run_cognify(dataset: str, timeout: float = 120.0) -> None:
+    asyncio.run(cognify(dataset, timeout=timeout))
 
 
 def run_search(query: str, dataset: str, search_type: str = "CHUNKS", top_k: int = 10) -> list[Any]:

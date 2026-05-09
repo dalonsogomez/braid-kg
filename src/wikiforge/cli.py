@@ -60,6 +60,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_status = sub.add_parser("status", help="resumen del proyecto activo + perfil global")
 
+    # ADR 0009 — auto-bootstrap RAG vía SessionStart hook
+    p_css = sub.add_parser(
+        "claude-session-start",
+        help="(hook) reporta estado memoria del repo activo en <500ms · sin LLM",
+    )
+    p_css.add_argument("--json", dest="as_json", action="store_true", help="emitir JSON estructurado")
+
+    p_ci = sub.add_parser(
+        "claude-init",
+        help="cablea hook SessionStart en <git_root>/.claude/settings.json (idempotente)",
+    )
+    p_ci.add_argument("--remove", action="store_true", help="quitar el hook (preserva el resto del JSON)")
+
     return p
 
 
@@ -84,6 +97,12 @@ def main(argv: list[str] | None = None) -> int:
     if cmd == "status":
         from .commands import status as status_cmd
         return status_cmd.run()
+    if cmd == "claude-session-start":
+        from .commands import claude as claude_cmd
+        return claude_cmd.run_session_start(as_json=args.as_json)
+    if cmd == "claude-init":
+        from .commands import claude as claude_cmd
+        return claude_cmd.run_init(remove=args.remove)
     if cmd == "eval":
         print("[wikiforge eval] stub — Fase 2 deliverable; usar `validate_phase0.py` mientras tanto", file=sys.stderr)
         return 1

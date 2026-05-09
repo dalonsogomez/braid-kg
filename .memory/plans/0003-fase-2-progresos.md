@@ -62,7 +62,49 @@ cognee no idéntico (1.0.5 vs 1.0.8) pero ladybug sí — la pieza crítica para
 ## TODOs abiertos para Fase 2 (orden por prioridad)
 
 1. ~~**ADR 0008**~~ ✅ Resuelto 2026-05-07.
-2. **Cognee cleanup async hang** — confirmado de nuevo en cognify mini de hoy. Investigar root cause o aplicar `asyncio.wait_for(timeout=...)` wrapper en `runner.py`. Próximo TODO de máxima prioridad.
+2. ~~**Cognee cleanup async hang**~~ ✅ **Mitigado** 2026-05-09 (ADR 0009): `asyncio.wait_for(timeout=120)` envuelve `cognify` en `runner.py`. Root cause sigue abierto upstream pero el CLI ya no se cuelga.
 3. **Reranker** — síntoma 11.4 medido en Fase 0 (Q2/Q3 a 0.5 por falta). Activar `bge-reranker-v2-m3` o `qwen3-reranker-4b`. Requiere ADR autorizando la nueva dep.
 4. **Suite `wikiforge eval`** — entregable Fase 2 según plan original.
 5. **PR upstream a cognee** — relajar el `cognee==1.0.0` strict pin del cognee-mcp para no requerir el hack del pyproject.
+
+## 2026-05-09
+
+### Resolución de ADR 0009 — Auto-bootstrap RAG vía SessionStart hook
+
+**Promovido y resuelto:** sesión 2026-05-09 (mismo día — feature directa a partir de petición textual del usuario).
+
+#### Implementación
+
+1. `src/wikiforge/commands/claude.py` — nuevo módulo con `run_session_start()` y `run_init(remove=...)`. Solo I/O del filesystem, sin imports de cognee.
+2. `src/wikiforge/cli.py` — registra subcomandos `claude-session-start` (con `--json`) y `claude-init` (con `--remove`).
+3. `src/wikiforge/commands/index.py` — incremental por mtime: lee `.kg/last_index.json`, filtra inputs por `mtime > timestamp_unix`, exit 0 inmediato si nada cambió, escribe state al finalizar (con todos los paths actuales, no solo modificados).
+4. `src/wikiforge/runner.py` — `cognify(dataset, timeout=120)` envuelta con `asyncio.wait_for`; absorbe `TimeoutError` con log explícito (mitigación cleanup hang).
+5. `src/wikiforge/commands/sync.py` — mensaje actualizado.
+6. `.claude/settings.json` (repo WikiForge) — generado por `wikiforge claude-init` (dogfooding).
+7. `~/.wikiforge/profile/preferences.json` — añadido bloque `wikiforge_hooks.auto_sync_on_stop=false` (opt-in, default off).
+
+#### Validación
+
+| # | Escenario | Resultado |
+|---|---|---|
+| V1 | `claude-session-start` repo al día | ✅ "memoria al día (50 inputs · 9 ADRs)" en p50=250ms |
+| V2 | `--json` | ✅ JSON válido con `status:"ready"` |
+| V3 | cwd fuera de repo git | ✅ exit 0 silencioso (texto) / `status:"no_repo"` (json) |
+| V4 | `claude-init` en repo virgen | ✅ `.claude/settings.json` creado con hook |
+| V5 | `claude-init` x2 | ✅ idempotente ("ya presente, sin cambios") |
+| V6 | `--remove` con `permissions`/`env` preexistentes | ✅ preserva otras claves; archivo eliminado si queda vacío |
+| V7 | `sync` at-rest | ✅ "al día — sin cambios desde {iso}" en 0.41s, sin LLM |
+| V8 | `touch X.py + claude-session-start` | ✅ "memoria stale (1 archivo modificado · ejecuta 'wikiforge sync')" |
+
+p50 del hook: **~250 ms** (lectura completa de globs); ~55 ms cuando no hay `last_index.json`. Objetivo de <500 ms ampliamente cumplido.
+
+#### Anti-patrones respetados (AGENTS.md sec. 9)
+
+- Sec. 9.6 (nuevo comando sin ADR) — **cumplido**: ADR 0009 lo precede.
+- Sec. 9.7 (ingesta sin autorización por repo) — **cumplido**: el hook NO llama al LLM ni crea `.kg/`. Solo informa.
+
+#### Hallazgos secundarios
+
+- **Auto-cleanup en `claude-init --remove`**: si el archivo `.claude/settings.json` queda con un objeto vacío `{}` tras quitar el hook, se borra el archivo. Evita basura.
+- **`last_index.json` no detecta archivos borrados**, solo modificados/añadidos. Aceptado: `wikiforge index --rebuild` lo reconcilia cuando moleste.
+- **Symlink global necesario** — `wikiforge` no estaba en el PATH global (vivía sólo en `<repo>/.venv/bin/`). El hook se ejecuta sin venv activado. Solución: `ln -sf <repo>/.venv/bin/wikiforge ~/.local/bin/wikiforge`. Reversible y documentado en ADR 0009. La ruta de producción será `uv tool install` o `pipx install -e .`.
