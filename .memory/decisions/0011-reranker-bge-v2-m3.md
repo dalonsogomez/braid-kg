@@ -1,9 +1,11 @@
 # ADR 0011 — Reranker bge-reranker-v2-m3 (síntoma 11.4 — propuesto, activación pendiente)
 
-- **Estado:** Proposed (activación pendiente — ver sec. "Bloqueador" más abajo)
-- **Fecha:** 2026-05-09
+- **Estado:** Superseded (por ADR 0012)
+- **Superseded por:** [ADR 0012 — Reranker cloud vía OpenRouter (Cohere Rerank 4 Fast)](./0012-reranker-cloud-cohere-openrouter.md)
+- **Razón de supersession:** El user vetó descargas locales el 2026-05-09. Deep-research 2026-05-09 (30+ sources) demostró que Cohere Rerank 4 Fast vía OpenRouter es superior en disponibilidad (zero-friction, ya en stack), coste (passthrough $0) y privacidad (opt-in por flag). bge-reranker-v2-m3 LOCAL queda descartado.
+- **Fecha original:** 2026-05-09 (mismo día — superseded same-day)
 - **Decisor:** Daniel Alonso Gómez
-- **Tags:** retrieval,reranker,fase-2,sintoma-11.4,bge-reranker
+- **Tags:** retrieval,reranker,fase-2,sintoma-11.4,bge-reranker,superseded
 - **Origen:** Fase 0 Q2/Q3 medidas a 0.5 (recuperables top-5, no top-1) → síntoma 11.4 verificado. Plan 0003 TODO #3 explícito.
 
 ---

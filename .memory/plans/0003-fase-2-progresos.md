@@ -63,7 +63,7 @@ cognee no idéntico (1.0.5 vs 1.0.8) pero ladybug sí — la pieza crítica para
 
 1. ~~**ADR 0008**~~ ✅ Resuelto 2026-05-07.
 2. ~~**Cognee cleanup async hang**~~ ✅ **Mitigado** 2026-05-09 (ADR 0009): `asyncio.wait_for(timeout=120)` envuelve `cognify` en `runner.py`.
-3. **Reranker** ⏳ **Bloqueado por síntoma 11.8** — ADR 0011 escrito (Proposed), plan 0006 escrito. Activación pendiente de reindex completo, que requiere Ollama Cloud funcional.
+3. ~~**Reranker**~~ ✅ **Implementado** 2026-05-09 vía ADR 0012 (cloud-only, OpenRouter Cohere Rerank 4 Fast). ADR 0011 (bge-reranker LOCAL) Superseded por veto user descarga local + deep-research 30+ sources. `runner.rerank_via_openrouter` operativo, flag `--rerank` en `wikiforge eval`. Validación end-to-end pendiente de `OPENROUTER_API_KEY` en secrets.env (acción manual user).
 4. ~~**Suite `wikiforge eval`**~~ ✅ **Resuelto** 2026-05-09 (ADR 0010): comando `wikiforge eval` operativo, 10 preguntas en `.memory/eval/questions.json`, baseline registrado en `.memory/eval/runs/baseline-fase-2.json` = 5.5/10 contra dataset parcial.
 5. **PR upstream a cognee** — relajar el `cognee==1.0.0` strict pin del cognee-mcp para no requerir el hack del pyproject. Sin urgencia.
 6. **NUEVO — Síntoma 11.8 activo: Ollama Cloud caído.** Verificado 2026-05-09 12:18: `curl -m 30 /v1/chat/completions` con `kimi-k2.6:cloud` → timeout sin response. Reindex completo del repo bloqueado. Aplicar contingencia AGENTS.md sec. 11.8 (reversión a `qwen3:30b` local) si persiste >24h. Próxima sesión debe verificar estado primero.
@@ -139,3 +139,26 @@ p50 del hook: **~250 ms** (lectura completa de globs); ~55 ms cuando no hay `las
 - **Síntoma 11.8 activo** — Ollama Cloud `kimi-k2.6:cloud` caído (timeout 30s). Reindex completo bloqueado. Snapshot dataset parcial restaurado para preservar baseline. Plan 0006 sec. A2 prevé reversión a `qwen3:30b` local.
 - **ADR 0011 (Proposed)** — Reranker `bge-reranker-v2-m3` documentado pero sin implementar. Razón: validar el delta requiere reindex completo (bloqueado por 11.8). Plan 0006 lo retoma cuando 11.8 cierre.
 - **Reindex `--rebuild` NO borra `.data_storage/text_*.txt`** — solo limpia tablas y grafo. Esto permitió restaurar el dataset parcial vía simple `cp -R` desde snapshot. Útil saberlo para futuras operaciones destructivas.
+
+### Pivote cloud-only y reranker ADR 0012 (2026-05-09 sesión continuada)
+
+**Origen:** user mostró panel de 9 proveedores cloud y declaró *"no quiero tener el modelo utilizado y descargado de manera local ya que me ocupa muchos gigas"*. ADR 0011 (bge-reranker LOCAL 568 MB + sentence-transformers ~2 GB) queda incompatible.
+
+**Deep-research:** 16 búsquedas web paralelas, 30+ sources triangulado. Reporte completo en `~/Documents/WikiForge_Reranker_Research_20260509/research_report_20260509_wikiforge_reranker.md` (3722 palabras).
+
+**Conclusión:** Cohere Rerank 4 Fast vía OpenRouter ganador absoluto:
+- Passthrough $0/M tokens en OpenRouter actualmente
+- 100+ idiomas (incluido español), 32K context
+- ~600 ms latencia (lowest en familia Cohere)
+- LLM-as-judge con Gemini Flash descartado: 10× más caro y NDCG@10 0.68 vs 0.74 para reranker dedicado
+
+**Implementación:**
+1. `runner.rerank_via_openrouter(query, items, top_n, model="cohere/rerank-4-fast")` — POST a `https://openrouter.ai/api/v1/rerank` vía httpx, degraded mode si falta key.
+2. `runner.run_search_with_rerank` convenience helper.
+3. `commands/eval.py` flag `--rerank` (default off, opt-in privacidad).
+4. `commands/eval.py` registra `meta.reranker_used` y `meta.reranker_model` en run JSON.
+5. `cli.py` argparse `--rerank` cableado.
+
+**Verificación mecánica (sin key):** ejecutar `wikiforge eval --rerank` con dataset parcial → degraded mode log claro + items devueltos sin reordenar + comando NO falla. ✅
+
+**Pendiente (acción user):** copiar `OPENROUTER_API_KEY` desde panel OpenRouter a `~/.config/wikiforge/secrets.env`. Tras eso, validar end-to-end con `wikiforge eval --rerank` y comparar contra `baseline-fase-2.json` (5.5/10).

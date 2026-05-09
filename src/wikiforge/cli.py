@@ -60,6 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_ev.add_argument("--top-k", type=int, default=None, help="override top_k del scoring")
     p_ev.add_argument("--no-save", dest="save", action="store_false", help="no escribir run JSON al filesystem")
     p_ev.add_argument("--per-question-timeout", type=float, default=None, help="timeout en segundos por search; default 90s")
+    p_ev.add_argument("--rerank", action="store_true", help="(ADR 0012) reordena top-K via Cohere Rerank 4 Fast en OpenRouter; requiere OPENROUTER_API_KEY en secrets.env")
 
     p_rev = sub.add_parser("review", help="revisar código con 3 modelos AI en paralelo vía ZenMux")
     p_rev.add_argument("prompt", help="código o diff a revisar")
@@ -123,6 +124,7 @@ def main(argv: list[str] | None = None) -> int:
             top_k=args.top_k,
             save=args.save,
             per_question_timeout=args.per_question_timeout,
+            rerank=args.rerank,
         )
     if cmd == "wiki":
         print("[wikiforge wiki build] stub — Mes 2+; ver AGENTS.md sec. 7", file=sys.stderr)

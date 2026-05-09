@@ -1,10 +1,17 @@
 """Wrapper alrededor de cognee.add/cognify/search con el env del stack ADR 0005+0006 ya aplicado.
 
 Importa cognee de forma diferida para no pagar el coste de import si el comando no lo necesita.
+
+ADR 0012 añade `rerank_via_openrouter` (cloud-only, sin descarga local) que reordena
+top-K resultados de cognee.search vía Cohere Rerank 4 Fast en OpenRouter.
 """
 from __future__ import annotations
 
 import asyncio
+import json
+import os
+import sys
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -97,3 +104,133 @@ def annotate_file(path: Path, root: Path, kind: str) -> str:
     """Añade el header [FILE kind=... path=...] que cognee+LLM mantienen en el grafo."""
     rel = path.relative_to(root)
     return f"[FILE kind={kind} path={rel}]\n" + path.read_text(errors="ignore")
+
+
+# ---------------------------------------------------------------------------
+# ADR 0012 — Reranker cloud vía OpenRouter (Cohere Rerank 4 Fast)
+# ---------------------------------------------------------------------------
+
+OPENROUTER_RERANK_URL = "https://openrouter.ai/api/v1/rerank"
+DEFAULT_RERANKER_MODEL = "cohere/rerank-4-fast"
+RERANK_TIMEOUT_S = 30.0
+
+
+def _extract_text_for_rerank(item: Any) -> str:
+    """Extrae el contenido textual de un item devuelto por cognee.search.
+
+    Defensivo ante dict / objeto con .text / str / lista anidada / None.
+    Mismo patrón que `commands.eval._extract_text` pero copiado aquí para
+    evitar import circular.
+    """
+    if item is None:
+        return ""
+    if isinstance(item, str):
+        return item
+    if isinstance(item, list):
+        return " \n ".join(_extract_text_for_rerank(x) for x in item)
+    if isinstance(item, dict):
+        for key in ("text", "content", "description", "summary"):
+            v = item.get(key)
+            if isinstance(v, str):
+                return v
+        try:
+            return json.dumps(item, ensure_ascii=False)
+        except (TypeError, ValueError):
+            return repr(item)
+    for attr in ("text", "content", "description", "summary"):
+        v = getattr(item, attr, None)
+        if isinstance(v, str):
+            return v
+    return str(item)
+
+
+def _get_openrouter_key() -> str | None:
+    load_secrets_into_env()
+    return os.environ.get("OPENROUTER_API_KEY") or None
+
+
+def rerank_via_openrouter(
+    query: str,
+    items: list[Any],
+    top_n: int | None = None,
+    model: str = DEFAULT_RERANKER_MODEL,
+) -> list[Any]:
+    """Reordena `items` por relevancia a `query` vía OpenRouter (Cohere Rerank 4 Fast).
+
+    ADR 0012: opt-in. Si `OPENROUTER_API_KEY` no está disponible, devuelve
+    `items[:top_n]` (degraded mode con log). Si la llamada HTTP falla, idem.
+    """
+    if not items:
+        return items
+    if top_n is None or top_n > len(items):
+        top_n = len(items)
+
+    key = _get_openrouter_key()
+    if not key:
+        print(
+            "[wikiforge rerank] OPENROUTER_API_KEY ausente — devuelvo top_n sin reordenar "
+            "(degraded mode). Añade la key a ~/.config/wikiforge/secrets.env para activar.",
+            file=sys.stderr,
+        )
+        return items[:top_n]
+
+    try:
+        import httpx  # noqa: PLC0415  — dep optativa, ya está en pyproject por commands/review.py
+    except ImportError:
+        print(
+            "[wikiforge rerank] httpx no instalado — devuelvo top_n sin reordenar "
+            "(degraded mode). `uv pip install httpx`.",
+            file=sys.stderr,
+        )
+        return items[:top_n]
+
+    documents = [_extract_text_for_rerank(it) for it in items]
+    body = {
+        "model": model,
+        "query": query,
+        "documents": documents,
+        "top_n": top_n,
+    }
+    headers = {
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = httpx.post(OPENROUTER_RERANK_URL, headers=headers, json=body, timeout=RERANK_TIMEOUT_S)
+        response.raise_for_status()
+        data = response.json()
+    except httpx.HTTPError as e:
+        print(f"[wikiforge rerank] HTTP error: {type(e).__name__}: {e} — degraded mode", file=sys.stderr)
+        return items[:top_n]
+    except (ValueError, KeyError) as e:
+        print(f"[wikiforge rerank] respuesta inesperada de OpenRouter: {e} — degraded mode", file=sys.stderr)
+        return items[:top_n]
+
+    results = data.get("results") or []
+    if not results:
+        print("[wikiforge rerank] respuesta vacía — degraded mode", file=sys.stderr)
+        return items[:top_n]
+
+    reordered: list[Any] = []
+    for r in results:
+        idx = r.get("index")
+        if isinstance(idx, int) and 0 <= idx < len(items):
+            reordered.append(items[idx])
+    return reordered or items[:top_n]
+
+
+def run_search_with_rerank(
+    query: str,
+    dataset: str,
+    search_type: str = "CHUNKS",
+    top_k: int = 10,
+    rerank: bool = False,
+    rerank_top_n: int | None = None,
+) -> list[Any]:
+    """Convenience: search + opcional rerank en una sola llamada (síncrona)."""
+    items = run_search(query, dataset, search_type=search_type, top_k=top_k)
+    if not rerank or not items:
+        return items
+    n = rerank_top_n or top_k
+    return rerank_via_openrouter(query, items, top_n=n)

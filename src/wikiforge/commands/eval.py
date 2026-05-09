@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from ..paths import resolve_context
-from ..runner import run_search
+from ..runner import rerank_via_openrouter, run_search
 
 
 DEFAULT_QUESTIONS = ".memory/eval/questions.json"
@@ -163,8 +163,20 @@ def _save_run(root: Path, run: dict) -> Path | None:
         return None
 
 
-def _search_with_timeout(query: str, dataset_id: str, search_type: str, top_k: int, timeout_s: float) -> list[Any]:
-    """Llama run_search con timeout; un cognee colgado no bloquea las otras preguntas."""
+def _search_with_timeout(
+    query: str,
+    dataset_id: str,
+    search_type: str,
+    top_k: int,
+    timeout_s: float,
+    rerank: bool = False,
+) -> list[Any]:
+    """Llama run_search con timeout; un cognee colgado no bloquea las otras preguntas.
+
+    ADR 0012: si `rerank=True`, aplica `rerank_via_openrouter` tras el search
+    (solo para search_type=CHUNKS — los SUMMARIES son textos de meta y rerankearlos
+    es ruido). Degraded mode si OPENROUTER_API_KEY ausente.
+    """
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
         fut = ex.submit(run_search, query, dataset_id, search_type=search_type, top_k=top_k)
         try:
@@ -182,7 +194,12 @@ def _search_with_timeout(query: str, dataset_id: str, search_type: str, top_k: i
             items = list(items)
         except TypeError:
             items = [items]
-    return items[:top_k]
+    items = items[:top_k]
+
+    if rerank and search_type == "CHUNKS" and items:
+        items = rerank_via_openrouter(query, items, top_n=top_k)
+
+    return items
 
 
 def run(
@@ -190,6 +207,7 @@ def run(
     top_k: int | None = None,
     save: bool = True,
     per_question_timeout: float | None = None,
+    rerank: bool = False,
 ) -> int:
     ctx = resolve_context()
     qp = Path(questions_path) if questions_path else (ctx.root / DEFAULT_QUESTIONS)
@@ -229,7 +247,7 @@ def run(
     print(
         f"[wikiforge eval] dataset={dataset_id} root={ctx.root} "
         f"questions={len(questions)} search_types={search_types} top_k={effective_top_k} "
-        f"timeout={timeout_s:.0f}s"
+        f"timeout={timeout_s:.0f}s rerank={rerank}"
     )
 
     per_q: list[dict] = []
@@ -240,7 +258,7 @@ def run(
         results_by_type: dict[str, list[Any]] = {}
         for st in search_types:
             results_by_type[st] = _search_with_timeout(
-                q["query"], dataset_id, st, effective_top_k, timeout_s
+                q["query"], dataset_id, st, effective_top_k, timeout_s, rerank=rerank
             )
         per_q.append(_score_question(q, results_by_type, primary_search_type=primary_st, top_1_bonus=top_1_bonus))
 
@@ -278,6 +296,8 @@ def run(
             "top_k": effective_top_k,
             "elapsed_seconds": round(elapsed, 1),
             "questions_suite_version": suite.get("version", 1),
+            "reranker_used": rerank,
+            "reranker_model": "cohere/rerank-4-fast" if rerank else None,
         },
     }
 

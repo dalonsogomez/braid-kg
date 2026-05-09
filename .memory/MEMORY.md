@@ -14,7 +14,8 @@
 - [ADR 0008 — Alinear versions de cognee entre venvs](decisions/0008-alinear-versions-de-cognee-entre-venvs-wf-y-cognee-mcp.md) — **Resolved** (2026-05-07). Ambos venvs ahora usan ladybug 0.16.1 + patch del version mapping; cognee-mcp upgrade a 1.0.8 vía edit del pyproject + `uv lock --upgrade-package cognee`. Cross-venv recall validado end-to-end.
 - [ADR 0009 — Auto-bootstrap RAG vía SessionStart hook](decisions/0009-auto-bootstrap-rag-via-session-hook.md) — **Active** (2026-05-09). Comando `claude-session-start` (<500 ms, sin LLM) reporta estado memoria a cada inicio de sesión Claude Code; `claude-init` cablea hook idempotente; `sync` incremental por mtime + timeout 120s mitiga cleanup hang upstream.
 - [ADR 0010 — Suite `wikiforge eval`](decisions/0010-suite-wikiforge-eval.md) — **Active** (2026-05-09). Comando `wikiforge eval` operativo (ya no stub); 10 preguntas en `.memory/eval/questions.json`; scoring por substring + recall@1/recall@K; runs guardados en `.memory/eval/runs/`. Cumple criterio AGENTS.md sec. 10 Fase 2.
-- [ADR 0011 — Reranker bge-reranker-v2-m3](decisions/0011-reranker-bge-v2-m3.md) — **Proposed** (2026-05-09). Activación pendiente de cierre síntoma 11.8 (Ollama Cloud caído). Plan 0006 lo retoma cuando 11.8 cierre.
+- [ADR 0011 — Reranker bge-reranker-v2-m3](decisions/0011-reranker-bge-v2-m3.md) — **Superseded** por ADR 0012 (2026-05-09 mismo día). User vetó descarga local; deep-research validó cloud-only.
+- [ADR 0012 — Reranker cloud vía OpenRouter (Cohere Rerank 4 Fast)](decisions/0012-reranker-cloud-cohere-openrouter.md) — **Active** (2026-05-09). Sin descarga local, passthrough $0 en OpenRouter, multilingüe 100+, 32K context. `runner.rerank_via_openrouter` implementado. Activable via `wikiforge eval --rerank` (requiere `OPENROUTER_API_KEY` en secrets.env). Validado por deep-research 30+ sources.
 
 ## Planes activos
 
