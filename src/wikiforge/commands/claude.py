@@ -161,14 +161,24 @@ def _save_settings(p: Path, data: dict) -> None:
 
 
 def _hook_entry() -> dict:
-    """Estructura del hook según docs Claude Code (`hooks.SessionStart` array)."""
+    """Estructura del hook según docs oficiales Claude Code (code.claude.com/docs/en/hooks).
+
+    SessionStart admite `matcher` (startup|resume|clear|compact) — usamos los cuatro
+    para que Claude reciba el estado de WikiForge tras cualquier transición.
+    `timeout` en segundos: el comando p50 = 250 ms, ponemos 5 s por seguridad
+    (default 600 s sería absurdo bloquear la sesión).
+    `statusMessage` se muestra al usuario durante la ejecución del hook.
+    """
     return {
+        "matcher": "startup|resume|clear|compact",
         "hooks": [
             {
                 "type": "command",
                 "command": HOOK_COMMAND,
+                "timeout": 5,
+                "statusMessage": "Cargando memoria WikiForge...",
             }
-        ]
+        ],
     }
 
 

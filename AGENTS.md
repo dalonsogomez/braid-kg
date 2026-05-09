@@ -183,9 +183,11 @@ El CLI es deliberadamente pequeño. Hace pocas cosas y las hace bien. Cualquier 
 | `wikiforge promote-decision "<texto>"` | Promueve sesión → proyecto. Genera ADR en `.memory/decisions/NNNN-<slug>.md`. |
 | `wikiforge promote-to-global "<texto>"` | Promueve proyecto → global. Solo si el texto aplica cross-proyectos. |
 | `wikiforge demote --id <decision_id>` | Revierte una promoción indebida. |
-| `wikiforge sync` | Reescanea `.kg/` y reconcilia con el sistema de archivos (útil tras git pull). |
+| `wikiforge sync` | Reescanea `.kg/` y reconcilia con el sistema de archivos (útil tras git pull). Incremental real por `mtime` desde ADR 0009: at-rest exit 0 sin invocar el LLM. |
 | `wikiforge eval` | Ejecuta una suite mínima de 10-20 preguntas reales del repo y mide grounding y alucinación. Es la herramienta para validar regresiones. |
 | `wikiforge wiki build` | (Mes 2+) Genera Markdown desde Cognee y compila Astro Starlight. |
+| `wikiforge claude-session-start` | (ADR 0009) Subcomando de hook. Lee filesystem, reporta estado de memoria del repo activo en una línea (al día / stale / no inicializado / no-repo) en p50 ≈ 250 ms. **No llama al LLM ni crea `.kg/`.** Soporta `--json`. Su stdout entra en el contexto de Claude Code (sec. 4 schema oficial Anthropic). |
+| `wikiforge claude-init` | (ADR 0009) Cablea hook `SessionStart` (matchers `startup\|resume\|clear\|compact`, `timeout: 5s`, `statusMessage`) en `<git_root>/.claude/settings.json`. Idempotente; preserva otras claves (`permissions`, `env`, otros hooks). `--remove` lo desinstala. |
 
 ---
 
@@ -195,10 +197,11 @@ Las siguientes reglas se aplican a cualquier agente (Claude Code, Codex CLI, Cur
 
 ### 8.1. Antes de responder
 
-1. **Resuelve el contexto vía MCP `cognee`** (o el wrapper de WikiForge si está disponible) **antes** de responder a cualquier pregunta sobre código o decisiones del proyecto. No respondas de memoria sobre símbolos del repo: consulta primero.
-2. **Si el grafo no devuelve resultados con score suficiente**, dilo explícitamente. No inventes el comportamiento de funciones que no estén en el grafo. Pide al usuario que ejecute `wikiforge index` si sospechas que el repo no está indexado.
-3. **Cita la fuente** cuando uses información del grafo: ruta de archivo, número de línea aproximado, o ID del ADR (`.memory/decisions/NNNN-*.md`).
-4. **No mezcles contexto cross-proyectos.** Si la pregunta es del proyecto actual, no cites información del perfil global. Si necesitas el perfil global porque falta señal local, dilo: *"Sin información en el proyecto activo; según tu perfil global..."*
+1. **Lee el banner `[WikiForge] …` del primer mensaje del sistema** si aparece (lo emite el hook `SessionStart` configurado por `wikiforge claude-init` — ADR 0009). Te dice si la memoria del repo está al día, stale, no indexada o no inicializada. Si dice "no inicializado" / "no indexado", **no consultes cognee**: pídele al usuario `wikiforge init && wikiforge index` antes de responder. Si dice "stale", avisa que las respuestas pueden estar desactualizadas y sugiere `wikiforge sync`.
+2. **Resuelve el contexto vía MCP `cognee`** (o el wrapper de WikiForge si está disponible) **antes** de responder a cualquier pregunta sobre código o decisiones del proyecto. No respondas de memoria sobre símbolos del repo: consulta primero.
+3. **Si el grafo no devuelve resultados con score suficiente**, dilo explícitamente. No inventes el comportamiento de funciones que no estén en el grafo. Pide al usuario que ejecute `wikiforge index` si el banner del paso 1 lo indicaba.
+4. **Cita la fuente** cuando uses información del grafo: ruta de archivo, número de línea aproximado, o ID del ADR (`.memory/decisions/NNNN-*.md`).
+5. **No mezcles contexto cross-proyectos.** Si la pregunta es del proyecto actual, no cites información del perfil global. Si necesitas el perfil global porque falta señal local, dilo: *"Sin información en el proyecto activo; según tu perfil global..."*
 
 ### 8.2. Durante la respuesta
 
