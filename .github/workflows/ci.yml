@@ -50,6 +50,8 @@ jobs:
         run: |
           PYTHONPATH=src python -m braid.cli --help
           PYTHONPATH=src python -m braid.cli status --json
+          PYTHONPATH=src python -m braid.cli patterns --json
+          PYTHONPATH=src python -m braid.cli wiki build --obsidian --output /tmp/braid-obsidian-vault
 
       - name: Check diff whitespace
         run: git diff --check

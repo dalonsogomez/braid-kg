@@ -92,8 +92,8 @@ contract, not rebuildable runtime state.
 ## Operational Patterns
 
 Braid treats recurring repo-memory problems as explicit operational patterns,
-not hidden heuristics. These patterns are intentionally implemented through the
-existing commands and tests instead of a new CLI surface.
+not hidden heuristics. `braid patterns` exposes that playbook in the CLI while
+the existing commands and tests enforce the behavior.
 
 ![Braid operational patterns](docs/diagrams/braid-operational-patterns.svg)
 
@@ -104,6 +104,11 @@ existing commands and tests instead of a new CLI surface.
 | Activate | Run `braid agent-init --fix` to repair only Braid-managed agent config while preserving unrelated settings. |
 | Isolate | DuckLake, FTS, and LanceDB tests use temporary catalogs and never depend on the real local `.braid/kg` catalog. |
 | Evaluate | Retrieval changes are gated by `braid eval` evidence, not by architecture guesses. |
+
+```bash
+braid patterns
+braid patterns --json
+```
 
 ## Quick Start
 
@@ -156,6 +161,31 @@ Run the MCP server for tools that consume Braid through MCP:
 ```bash
 braid mcp-serve
 ```
+
+## Obsidian Vault Export
+
+Braid can generate an Obsidian-readable vault from the active project memory.
+This is a reading surface, not a new source of truth: canonical project memory
+stays in `<project>/.braid/memory/`, and global personal memory stays in
+`$HOME/.braid/profile/`.
+
+```bash
+braid wiki build --obsidian
+braid wiki build --obsidian --output ~/Vaults/Braid-Project
+braid wiki build --obsidian --vault ~/Vaults/Personal
+```
+
+Destination rules are intentionally strict:
+
+| Destination | Behavior |
+| --- | --- |
+| no destination | Creates a generated vault at `.braid/wiki/obsidian/`. |
+| `--output <dir>` | Creates a new vault at `<dir>` and adds a minimal `.obsidian/` folder. |
+| `--vault <dir>` | Writes only to `<dir>/Braid/<dataset_id>/` and leaves existing notes and `.obsidian/` untouched. |
+
+The export includes `Braid Home.md`, project `MEMORY.md`, ADRs, plans, and
+optional generated KG/RAG pages when DuckLake is available. It does not run
+`braid index`, call an LLM, promote memory, or alter retrieval state.
 
 ## Agent Activation
 
@@ -221,9 +251,10 @@ The current MCP server exposes:
 | `braid demote --id <decision_id>` | Move a promoted ADR out of the active decision set. |
 | `braid sync` | Reconcile filesystem state with the index. |
 | `braid eval` | Run grounding and recall evaluation questions. |
-| `braid wiki build` | Generate Markdown wiki output under `.braid/wiki/`. |
+| `braid wiki build` | Generate Markdown wiki output under `.braid/wiki/`; add `--obsidian` to export a safe Obsidian vault. |
 | `braid status --json` | Print active project and memory status as stable JSON for agents. |
 | `braid doctor` | Diagnose installation, context, agent drift, secrets, GitHub remote, and catalog health without indexing or LLM calls. |
+| `braid patterns` | Show the read-only operational playbook and local evidence for Braid usage patterns. |
 | `braid agent-init` | Apply, check, fix, or remove supported agent integrations. |
 | `braid claude-session-start` | Fast hook command for agent session startup. |
 | `braid mcp-serve` | Start the Braid MCP server over stdio. |
@@ -260,6 +291,8 @@ Useful local checks:
 ```bash
 PYTHONPATH=src .venv/bin/python -m braid.cli --help
 PYTHONPATH=src .venv/bin/python -m braid.cli status --json
+PYTHONPATH=src .venv/bin/python -m braid.cli patterns --json
+PYTHONPATH=src .venv/bin/python -m braid.cli wiki build --obsidian --output /tmp/braid-obsidian-vault
 braid doctor --json
 braid agent-init --check --json
 git diff --check
@@ -291,9 +324,8 @@ grounding, recall, or reranking fails in measurable ways, the change should be
 documented with an ADR and validated against temporary DuckLake/Cognee fixtures
 before touching live project catalogs.
 
-A future `braid patterns` command may be useful if these operational patterns
-need machine-readable reporting beyond `doctor --json`, but it should be added
-only with a new ADR, tests, and a stable JSON interface.
+`braid patterns --json` is the stable machine-readable surface for the
+operational playbook. `doctor --json` remains the health diagnostic surface.
 
 ## Status
 

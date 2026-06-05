@@ -5,10 +5,11 @@ Genera Markdown desde el DuckLake catalog y lo escribe en `.braid/wiki/`.
 """
 from __future__ import annotations
 
+import shutil
 import sys
 from pathlib import Path
 
-from ..paths import resolve_context
+from ..paths import ProjectContext, resolve_context
 
 
 def _slugify(text: str) -> str:
@@ -161,8 +162,177 @@ def _generate_index(wiki_dir: Path, project_slug: str, all_pages: list[str]) -> 
     (wiki_dir / "index.md").write_text("\n".join(lines))
 
 
-def run(output_dir: str | None = None) -> int:
+def _safe_dataset_dir(dataset_id: str) -> str:
+    name = dataset_id.replace("/", "-").replace("\\", "-").strip()
+    return name or "project"
+
+
+def _copy_markdown_file(src: Path, dest: Path, fallback_title: str) -> bool:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if src.is_file():
+        shutil.copyfile(src, dest)
+        return True
+    dest.write_text(f"# {fallback_title}\n\n(No source file found.)\n")
+    return False
+
+
+def _copy_markdown_tree(src_dir: Path, dest_dir: Path) -> list[str]:
+    copied: list[str] = []
+    if not src_dir.is_dir():
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        return copied
+    for src in sorted(src_dir.glob("*.md")):
+        dest = dest_dir / src.name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, dest)
+        copied.append(str(dest.relative_to(dest_dir.parent)))
+    return copied
+
+
+def _obsidian_link(path: str) -> str:
+    return path.removesuffix(".md")
+
+
+def _obsidian_target(ctx: ProjectContext, output_dir: str | None, vault_dir: str | None) -> tuple[Path, bool]:
+    if output_dir and vault_dir:
+        raise ValueError("--output and --vault are mutually exclusive")
+    if vault_dir:
+        vault = Path(vault_dir).expanduser().resolve()
+        return vault / "Braid" / _safe_dataset_dir(ctx.dataset_id), False
+    if output_dir:
+        return Path(output_dir).expanduser().resolve(), True
+    return ctx.wiki_dir / "obsidian", True
+
+
+def _ensure_obsidian_vault(vault_root: Path, create_settings: bool) -> None:
+    vault_root.mkdir(parents=True, exist_ok=True)
+    if create_settings:
+        (vault_root / ".obsidian").mkdir(parents=True, exist_ok=True)
+
+
+def _generate_obsidian_catalog_pages(ctx: ProjectContext, vault_root: Path) -> tuple[list[str], str]:
+    generated_dir = vault_root / "Generated"
+    try:
+        from ..ducklake import BraidCatalog
+    except ImportError as exc:
+        return [], f"DuckLake unavailable: {exc}"
+
+    try:
+        generated_dir.mkdir(parents=True, exist_ok=True)
+        pages: list[str] = []
+        with BraidCatalog() as cat:
+            pages.extend(_generate_adr_pages(cat, ctx.dataset_id, generated_dir))
+            pages.extend(_generate_memory_pages(cat, ctx.dataset_id, generated_dir))
+            pages.extend(_generate_kg_pages(cat, ctx.dataset_id, generated_dir))
+        if pages:
+            _generate_index(generated_dir, ctx.dataset_id, pages)
+        return [f"Generated/{page}" for page in pages], f"generated {len(pages)} catalog pages"
+    except Exception as exc:
+        return [], f"DuckLake skipped: {exc}"
+
+
+def _write_obsidian_home(
+    ctx: ProjectContext,
+    vault_root: Path,
+    memory_exported: bool,
+    adr_pages: list[str],
+    plan_pages: list[str],
+    generated_pages: list[str],
+    catalog_status: str,
+) -> None:
+    lines = [
+        "# Braid Home",
+        "",
+        f"- **Project:** {ctx.dataset_id}",
+        f"- **Root:** `{ctx.root}`",
+        f"- **State:** `{ctx.braid_dir}`",
+        f"- **Canonical memory:** `{ctx.memory_dir}`",
+        "",
+        "## Navigation",
+        "",
+        f"- [[{_obsidian_link('Memory/MEMORY.md')}|Project Memory]]",
+    ]
+    if adr_pages:
+        lines.append("- ADRs")
+        for page in adr_pages:
+            lines.append(f"  - [[{_obsidian_link(page)}]]")
+    if plan_pages:
+        lines.append("- Plans")
+        for page in plan_pages:
+            lines.append(f"  - [[{_obsidian_link(page)}]]")
+    if generated_pages:
+        lines.append("- Generated Catalog Pages")
+        for page in generated_pages:
+            lines.append(f"  - [[{_obsidian_link(page)}]]")
+
+    lines.extend(
+        [
+            "",
+            "## Commands",
+            "",
+            "- `braid status --json`",
+            "- `braid doctor`",
+            "- `braid patterns`",
+            "- `braid wiki build --obsidian`",
+            "",
+            "## Export Status",
+            "",
+            f"- Memory source copied: `{str(memory_exported).lower()}`",
+            f"- Catalog: {catalog_status}",
+            "",
+            "> This vault is a generated reading surface. The source of truth remains Braid memory.",
+            "",
+        ]
+    )
+    (vault_root / "Braid Home.md").write_text("\n".join(lines))
+
+
+def _run_obsidian(ctx: ProjectContext, output_dir: str | None, vault_dir: str | None) -> int:
+    try:
+        vault_root, create_settings = _obsidian_target(ctx, output_dir, vault_dir)
+    except ValueError as exc:
+        print(f"[braid wiki build] {exc}", file=sys.stderr)
+        return 2
+
+    _ensure_obsidian_vault(vault_root, create_settings=create_settings)
+
+    memory_exported = _copy_markdown_file(
+        ctx.memory_dir / "MEMORY.md",
+        vault_root / "Memory" / "MEMORY.md",
+        "Project Memory",
+    )
+    adr_pages = _copy_markdown_tree(ctx.memory_dir / "decisions", vault_root / "ADRs")
+    plan_pages = _copy_markdown_tree(ctx.memory_dir / "plans", vault_root / "Plans")
+    try:
+        generated_pages, catalog_status = _generate_obsidian_catalog_pages(ctx, vault_root)
+    except Exception as exc:
+        generated_pages, catalog_status = [], f"DuckLake skipped: {exc}"
+
+    _write_obsidian_home(
+        ctx,
+        vault_root,
+        memory_exported=memory_exported,
+        adr_pages=adr_pages,
+        plan_pages=plan_pages,
+        generated_pages=generated_pages,
+        catalog_status=catalog_status,
+    )
+
+    total = 2 + len(adr_pages) + len(plan_pages) + len(generated_pages)
+    print(f"[braid wiki build] obsidian project={ctx.dataset_id} output={vault_root}")
+    print(f"[braid wiki build] Obsidian notes generated: {total}")
+    print(f"[braid wiki build] {catalog_status}")
+    return 0
+
+
+def run(output_dir: str | None = None, obsidian: bool = False, vault_dir: str | None = None) -> int:
     ctx = resolve_context()
+    if vault_dir and not obsidian:
+        print("[braid wiki build] --vault requires --obsidian", file=sys.stderr)
+        return 2
+    if obsidian:
+        return _run_obsidian(ctx, output_dir=output_dir, vault_dir=vault_dir)
+
     wiki_dir = Path(output_dir) if output_dir else ctx.wiki_dir
 
     print(f"[braid wiki build] project={ctx.dataset_id} output={wiki_dir}")

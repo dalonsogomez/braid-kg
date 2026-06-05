@@ -71,7 +71,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_wiki = sub.add_parser("wiki", help="generar wiki publicable desde DuckLake")
     p_wiki.add_argument("subcmd", choices=["build"])
-    p_wiki.add_argument("--output", default=None, help="directorio de salida (default: .braid/wiki/)")
+    wiki_dest = p_wiki.add_mutually_exclusive_group()
+    wiki_dest.add_argument("--output", default=None, help="directorio de salida (default: .braid/wiki/)")
+    wiki_dest.add_argument("--vault", default=None, help="bóveda Obsidian existente; escribe solo en Braid/<dataset_id>/")
+    p_wiki.add_argument("--obsidian", action="store_true", help="generar bóveda Obsidian desde memoria/wiki Braid")
 
     p_mcp = sub.add_parser("mcp-serve", help="lanzar MCP server (stdio transport)")
 
@@ -81,6 +84,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_doc = sub.add_parser("doctor", help="diagnosticar instalación, contexto, agentes y estado Braid")
     p_doc.add_argument("--json", dest="as_json", action="store_true", help="emitir JSON estructurado")
     p_doc.add_argument("--fix", action="store_true", help="aplicar solo reparaciones locales seguras")
+
+    p_pat = sub.add_parser("patterns", help="mostrar playbook operativo read-only de Braid")
+    p_pat.add_argument("--json", dest="as_json", action="store_true", help="emitir JSON estructurado")
 
     p_ai = sub.add_parser("agent-init", help="aplicar/verificar/reparar integración Braid para agentes IA")
     p_ai.add_argument(
@@ -135,6 +141,9 @@ def main(argv: list[str] | None = None) -> int:
     if cmd == "doctor":
         from .commands import doctor as doctor_cmd
         return doctor_cmd.run(as_json=args.as_json, fix=args.fix)
+    if cmd == "patterns":
+        from .commands import patterns as patterns_cmd
+        return patterns_cmd.run(as_json=args.as_json)
     if cmd == "agent-init":
         return agent_cmd.run(
             agent=args.agent,
@@ -160,7 +169,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     if cmd == "wiki":
         from .commands import wiki as wiki_cmd
-        return wiki_cmd.run(output_dir=args.output)
+        return wiki_cmd.run(output_dir=args.output, obsidian=args.obsidian, vault_dir=args.vault)
     if cmd == "mcp-serve":
         import asyncio
         from .mcp_server import main as mcp_main

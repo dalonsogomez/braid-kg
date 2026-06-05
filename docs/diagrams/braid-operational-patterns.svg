@@ -17,8 +17,8 @@
     </style>
   </defs>
   <rect width="1280" height="720" fill="#ffffff"/>
-  <text x="64" y="58" class="title"><tspan x="64" >Operational patterns make Braid predictable</tspan></text>
-  <text x="64" y="94" class="subtitle"><tspan x="64" >The project keeps repeated cases as explicit workflows, not hidden heuristics.</tspan><tspan x="64" dy="1.45em">These patterns are checked by doctor, agent-init, tests, and CI.</tspan></text>
+  <text x="64" y="58" class="title"><tspan x="64" >braid patterns exposes the Braid playbook</tspan></text>
+  <text x="64" y="94" class="subtitle"><tspan x="64" >Read the operating model without changing project state.</tspan><tspan x="64" dy="1.45em">doctor keeps health checks; this command explains what to do next.</tspan></text>
 
   <rect x="80" y="165" width="500" height="180" class="card" fill="#dbeafe" stroke="#1d4ed8"/>
   <text x="116" y="210" class="label" fill="#1e3a8a"><tspan x="116" >Boundary</tspan></text>

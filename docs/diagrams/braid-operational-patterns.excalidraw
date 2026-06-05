@@ -29,14 +29,14 @@
       "updated": 1,
       "link": null,
       "locked": false,
-      "text": "Operational patterns make Braid predictable",
+      "text": "braid patterns exposes the Braid playbook",
       "fontSize": 28,
       "fontFamily": 1,
       "textAlign": "left",
       "verticalAlign": "top",
       "baseline": 25,
       "containerId": null,
-      "originalText": "Operational patterns make Braid predictable",
+      "originalText": "braid patterns exposes the Braid playbook",
       "lineHeight": 1.25
     },
     {
@@ -65,14 +65,14 @@
       "updated": 1,
       "link": null,
       "locked": false,
-      "text": "Repeated cases are explicit workflows, not hidden heuristics.\nThey are checked by doctor, agent-init, tests, and CI.",
+      "text": "Read the operating model without changing project state.\ndoctor keeps health checks; this command explains what to do next.",
       "fontSize": 18,
       "fontFamily": 1,
       "textAlign": "left",
       "verticalAlign": "top",
       "baseline": 16,
       "containerId": null,
-      "originalText": "Repeated cases are explicit workflows, not hidden heuristics.\nThey are checked by doctor, agent-init, tests, and CI.",
+      "originalText": "Read the operating model without changing project state.\ndoctor keeps health checks; this command explains what to do next.",
       "lineHeight": 1.25
     },
     {
