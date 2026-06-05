@@ -5,7 +5,7 @@ from pathlib import Path
 
 import duckdb
 
-from braid.ducklake import BraidCatalog
+from braid.ducklake import BraidCatalog, load_duckdb_extension
 
 
 def _catalog(tmp_path: Path) -> tuple[str, Path, Path]:
@@ -122,7 +122,7 @@ def _catalog(tmp_path: Path) -> tuple[str, Path, Path]:
 
     fts_path = tmp_path / "fts.duckdb"
     fts = duckdb.connect(str(fts_path))
-    fts.execute("LOAD fts")
+    assert load_duckdb_extension(fts, "fts", install=True)
     fts.execute(
         """
         CREATE TABLE rag_chunks_fts (

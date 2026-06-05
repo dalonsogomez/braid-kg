@@ -6,6 +6,8 @@ from pathlib import Path
 import duckdb
 import pytest
 
+from braid.ducklake import load_duckdb_extension
+
 
 @pytest.fixture
 def tmp_git_root(tmp_path: Path) -> Path:
@@ -166,7 +168,7 @@ def create_ducklake_test_catalog(tmp_path: Path) -> tuple[str, Path, Path]:
 
     fts_path = tmp_path / "fts.duckdb"
     fts = duckdb.connect(str(fts_path))
-    fts.execute("LOAD fts")
+    assert load_duckdb_extension(fts, "fts", install=True)
     fts.close()
 
     return catalog, fts_path, tmp_path / "lancedb"

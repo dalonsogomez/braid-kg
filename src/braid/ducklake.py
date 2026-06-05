@@ -141,6 +141,24 @@ def _sql_str_or_null(value: Any | None) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
+def load_duckdb_extension(con: duckdb.DuckDBPyConnection, name: str, *, install: bool = False) -> bool:
+    """Load a DuckDB extension, optionally installing it for clean environments."""
+
+    try:
+        con.execute(f"LOAD {name}")
+        return True
+    except Exception:
+        if not install:
+            return False
+
+    try:
+        con.execute(f"INSTALL {name}")
+        con.execute(f"LOAD {name}")
+        return True
+    except Exception:
+        return False
+
+
 # Legacy constants for backward compatibility (used by tests and direct imports)
 DUCKLAKE_CATALOG = _default_catalog_path()
 FTS_DB_PATH = _default_fts_path()
@@ -238,10 +256,7 @@ class BraidCatalog:
         # Loading too many extensions (spatial, aws, iceberg, delta) changes
         # the catalog context and breaks DuckLake table resolution
         for ext in ("ducklake", "json", "fts"):
-            try:
-                con.execute(f"LOAD {ext}")
-            except Exception:
-                pass  # Extension might not be available
+            load_duckdb_extension(con, ext)
         # Attach DuckLake catalog
         con.execute(f"ATTACH '{self.catalog}' AS {self.alias}")
         # Set catalog context
@@ -249,7 +264,9 @@ class BraidCatalog:
         # Attach FTS companion DB if it exists
         if self.fts_path.exists():
             self._fts_con = duckdb.connect(str(self.fts_path))
-            self._fts_con.execute("LOAD fts")
+            if not load_duckdb_extension(self._fts_con, "fts", install=True):
+                self._fts_con.close()
+                self._fts_con = None
 
     def close(self) -> None:
         """Close all connections."""
@@ -1798,7 +1815,8 @@ class BraidCatalog:
         """
         if not self._fts_con:
             self._fts_con = duckdb.connect(str(self.fts_path))
-            self._fts_con.execute("LOAD fts")
+            if not load_duckdb_extension(self._fts_con, "fts", install=True):
+                raise RuntimeError("DuckDB FTS extension is not available.")
 
         fts = self._fts_con
 
