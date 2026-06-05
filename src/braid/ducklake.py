@@ -1,12 +1,12 @@
-"""DuckLake integration for Fairlead — persistent catalog-based storage.
+"""DuckLake integration for Braid — persistent catalog-based storage.
 
 Provides a DuckDB-backed DuckLake catalog for structured memory, KG, RAG,
 ADR tracking, and FTS search. Complements the existing Cognee/Kuzu/LanceDB
 stack (AGENTS.md sec. 3) with SQL-queryable, ACID-transactional storage.
 
 Architecture:
-    - DuckLake catalog: ``ducklake:duckdb:wikiforge`` (Parquet data files)
-    - FTS companion DB: ``.kg/wikiforge_fts.duckdb`` (BM25 full-text search)
+    - DuckLake catalog: ``ducklake:duckdb:braid`` (Parquet data files)
+    - FTS companion DB: ``.braid/kg/braid_fts.duckdb`` (BM25 full-text search)
     - 16 tables across 10 domains (see SCHEMA_DOMAINS below)
 
 DuckLake constraints (as of v0.1.1):
@@ -16,11 +16,11 @@ DuckLake constraints (as of v0.1.1):
     - JSON, VARCHAR[], TIMESTAMP, DEFAULT all work
 
 Usage:
-    from wikiforge.ducklake import WikiForgeCatalog
+    from braid.ducklake import BraidCatalog
 
-    with WikiForgeCatalog() as cat:
+    with BraidCatalog() as cat:
         # Memory operations
-        cat.store_project_memory("Fairlead", "decision", "key", "value")
+        cat.store_project_memory("Braid", "decision", "key", "value")
         results = cat.search_project_memory("stack")
 
         # ADR operations
@@ -28,7 +28,7 @@ Usage:
         adrs = cat.search_adrs("Ollama")
 
         # KG operations
-        cat.store_kg_node("node-1", "Function", "my_func", "Fairlead")
+        cat.store_kg_node("node-1", "Function", "my_func", "Braid")
         edges = cat.get_node_edges("node-1")
 
         # FTS search (BM25)
@@ -53,7 +53,7 @@ import duckdb
 # Constants
 # ---------------------------------------------------------------------------
 
-DUCKLAKE_ALIAS = "wikiforge"
+DUCKLAKE_ALIAS = "braid"
 
 FTS_TABLES = {
     "project_memory_fts",
@@ -92,16 +92,16 @@ def _default_catalog_path() -> str:
     """Resolve the DuckLake catalog path from the project root.
 
     Uses resolve_context() to find the project root, then constructs
-    the path to .kg/wikiforge_ducklake. Falls back to the WikiForge
-    repo path if no project context is found.
+    the path to .braid/kg/braid_ducklake. Falls back to the current
+    working directory if no project context is found.
     """
     try:
         from .paths import resolve_context
         ctx = resolve_context()
-        root = ctx.root
+        return f"ducklake:duckdb:{ctx.kg_dir / 'braid_ducklake'}"
     except Exception:
-        root = Path.home() / "Developer/claude/code-projects/WikiForge"
-    return f"ducklake:duckdb:{root}/.kg/wikiforge_ducklake"
+        root = Path.cwd()
+    return f"ducklake:duckdb:{root / '.braid' / 'kg' / 'braid_ducklake'}"
 
 
 def _default_fts_path() -> Path:
@@ -109,10 +109,10 @@ def _default_fts_path() -> Path:
     try:
         from .paths import resolve_context
         ctx = resolve_context()
-        root = ctx.root
+        return ctx.kg_dir / "braid_fts.duckdb"
     except Exception:
-        root = Path.home() / "Developer/claude/code-projects/WikiForge"
-    return root / ".kg" / "wikiforge_fts.duckdb"
+        root = Path.cwd()
+    return root / ".braid" / "kg" / "braid_fts.duckdb"
 
 
 def _default_lancedb_path() -> Path:
@@ -120,10 +120,10 @@ def _default_lancedb_path() -> Path:
     try:
         from .paths import resolve_context
         ctx = resolve_context()
-        root = ctx.root
+        return ctx.rag_dir / "lancedb"
     except Exception:
-        root = Path.home() / "Developer/claude/code-projects/WikiForge"
-    return root / ".rag" / "lancedb"
+        root = Path.cwd()
+    return root / ".braid" / "rag" / "lancedb"
 
 
 def _utc_naive(dt: datetime) -> datetime:
@@ -178,19 +178,19 @@ def _next_id_for(table: str, con: duckdb.DuckDBPyConnection) -> int:
 
 
 # ---------------------------------------------------------------------------
-# WikiForgeCatalog
+# BraidCatalog
 # ---------------------------------------------------------------------------
 
-class WikiForgeCatalog:
-    """High-level interface to the Fairlead DuckLake catalog.
+class BraidCatalog:
+    """High-level interface to the Braid DuckLake catalog.
 
     Opens a DuckDB connection, loads required extensions, and attaches
     the DuckLake catalog. Supports context manager for clean teardown.
 
     Example::
 
-        with WikiForgeCatalog() as cat:
-            cat.store_project_memory("Fairlead", "decision", "key", "val")
+        with BraidCatalog() as cat:
+            cat.store_project_memory("Braid", "decision", "key", "val")
             rows = cat.search_project_memory("stack")
     """
 
@@ -213,7 +213,7 @@ class WikiForgeCatalog:
 
     # -- Context manager ---------------------------------------------------
 
-    def __enter__(self) -> WikiForgeCatalog:
+    def __enter__(self) -> BraidCatalog:
         self.open()
         return self
 
@@ -255,7 +255,7 @@ class WikiForgeCatalog:
     @property
     def con(self) -> duckdb.DuckDBPyConnection:
         if self._con is None:
-            raise RuntimeError("Catalog not open. Use 'with WikiForgeCatalog() as cat:' or call .open()")
+            raise RuntimeError("Catalog not open. Use 'with BraidCatalog() as cat:' or call .open()")
         return self._con
 
     @property
@@ -1024,7 +1024,7 @@ class WikiForgeCatalog:
             from .paths import resolve_context
             return resolve_context().dataset_id
         except Exception:
-            return "Fairlead"
+            return "Braid"
 
     # ======================================================================
     # 2b. HYBRID LOCAL/GLOBAL RETRIEVAL
@@ -1298,7 +1298,7 @@ class WikiForgeCatalog:
         consequences: str | None = None,
         superseded_by: str | None = None,
         tags: list[str] | None = None,
-        project_slug: str = "Fairlead",
+        project_slug: str = "Braid",
         file_path: str | None = None,
     ) -> int:
         """Store an Architecture Decision Record."""
@@ -1331,7 +1331,7 @@ class WikiForgeCatalog:
             for r in rows
         ]
 
-    def get_active_adrs(self, project_slug: str = "Fairlead") -> list[dict]:
+    def get_active_adrs(self, project_slug: str = "Braid") -> list[dict]:
         """Get all active ADRs for a project."""
         rows = self._q(
             f"SELECT adr_id, title, status, decision FROM {self.alias}.adrs "
@@ -1586,7 +1586,7 @@ class WikiForgeCatalog:
                 project_slug,
                 project_slug,
                 summary,
-                source_path=f".memory/compacted/{key}",
+                source_path=f".braid/memory/compacted/{key}",
                 chunk_type="memory_compaction",
             )
         except Exception:
@@ -1752,7 +1752,7 @@ class WikiForgeCatalog:
             - rag_chunks_fts (content)
         """
         if not self._fts_con:
-            raise RuntimeError("FTS companion database not available. Ensure .kg/wikiforge_fts.duckdb exists.")
+            raise RuntimeError("FTS companion database not available. Ensure .braid/kg/braid_fts.duckdb exists.")
         if table not in FTS_TABLES:
             raise ValueError(f"Unsupported FTS table: {table}")
 
@@ -1912,8 +1912,8 @@ class WikiForgeCatalog:
 
 @contextmanager
 def open_catalog(**kwargs: Any):
-    """Context manager shortcut for WikiForgeCatalog."""
-    cat = WikiForgeCatalog(**kwargs)
+    """Context manager shortcut for BraidCatalog."""
+    cat = BraidCatalog(**kwargs)
     cat.open()
     try:
         yield cat

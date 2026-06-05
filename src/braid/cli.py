@@ -1,4 +1,4 @@
-"""CLI `fairlead` — punto de entrada con subcomandos.
+"""CLI `braid` — punto de entrada con subcomandos.
 
 Comandos canónicos AGENTS.md sec. 7:
 - init, index, ask, promote-decision, promote-to-global, demote, sync, eval, wiki build
@@ -8,7 +8,6 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-from pathlib import Path
 
 from .commands import ask as ask_cmd
 from .commands import index as index_cmd
@@ -24,10 +23,10 @@ def _slugify(text: str, max_len: int = 60) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="fairlead", description="Repo-scoped context guidance for coding agents.")
+    p = argparse.ArgumentParser(prog="braid", description="Repo-scoped context guidance for coding agents.")
     sub = p.add_subparsers(dest="cmd", required=True, metavar="COMMAND")
 
-    p_init = sub.add_parser("init", help="crear .kg/.rag/.memory + .kgconfig + symlinks")
+    p_init = sub.add_parser("init", help="crear .braid/ + config + memoria + symlinks")
     p_init.add_argument("--dataset", help="override dataset_id (default = nombre del directorio)")
     p_init.add_argument("--force", action="store_true", help="sobrescribir si ya existe")
 
@@ -41,7 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_ask.add_argument("--top-k", type=int, default=5)
     p_ask.add_argument("--global", dest="use_global", action="store_true", help="forzar consulta al perfil global")
 
-    p_pd = sub.add_parser("promote-decision", help="sesión → proyecto: genera ADR en .memory/decisions/")
+    p_pd = sub.add_parser("promote-decision", help="sesión → proyecto: genera ADR en .braid/memory/decisions/")
     p_pd.add_argument("text", help="texto canónico de la decisión (1-3 frases)")
     p_pd.add_argument("--title", help="título corto (default: derivado del texto)")
     p_pd.add_argument("--tags", default="", help="tags coma-separados")
@@ -52,11 +51,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_dm = sub.add_parser("demote", help="revertir una promoción indebida")
     p_dm.add_argument("--id", required=True, help="NNNN del ADR a degradar")
 
-    p_sy = sub.add_parser("sync", help="reescanear `.kg/` y reconciliar (alias de index incremental)")
+    p_sy = sub.add_parser("sync", help="reescanear `.braid/kg/` y reconciliar (alias de index incremental)")
 
     # ADR 0010 — suite eval real (ya no stub)
     p_ev = sub.add_parser("eval", help="ejecuta suite de preguntas y mide grounding/alucinación (ADR 0010)")
-    p_ev.add_argument("--questions", default=None, help="path al questions.json (default .memory/eval/questions.json)")
+    p_ev.add_argument("--questions", default=None, help="path al questions.json (default .braid/memory/eval/questions.json)")
     p_ev.add_argument("--top-k", type=int, default=None, help="override top_k del scoring")
     p_ev.add_argument("--no-save", dest="save", action="store_false", help="no escribir run JSON al filesystem")
     p_ev.add_argument("--per-question-timeout", type=float, default=None, help="timeout en segundos por search; default 90s")
@@ -71,7 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_wiki = sub.add_parser("wiki", help="generar wiki publicable desde DuckLake")
     p_wiki.add_argument("subcmd", choices=["build"])
-    p_wiki.add_argument("--output", default=None, help="directorio de salida (default: wiki/)")
+    p_wiki.add_argument("--output", default=None, help="directorio de salida (default: .braid/wiki/)")
 
     p_mcp = sub.add_parser("mcp-serve", help="lanzar MCP server (stdio transport)")
 
@@ -151,13 +150,21 @@ def main(argv: list[str] | None = None) -> int:
     return 2
 
 
-def legacy_main(argv: list[str] | None = None) -> int:
-    """Entry point for the deprecated `wikiforge` command. Use `fairlead` instead."""
+def _legacy_main(old_name: str, argv: list[str] | None = None) -> int:
+    """Entry point for deprecated command names retained during migration."""
     print(
-        "\033[33mWarning:\033[0m `wikiforge` is deprecated. Use `fairlead` instead.",
+        f"\033[33mWarning:\033[0m `{old_name}` is deprecated. Use `braid` instead.",
         file=sys.stderr,
     )
     return main(argv)
+
+
+def legacy_fairlead_main(argv: list[str] | None = None) -> int:
+    return _legacy_main("fairlead", argv)
+
+
+def legacy_wikiforge_main(argv: list[str] | None = None) -> int:
+    return _legacy_main("wikiforge", argv)
 
 
 if __name__ == "__main__":

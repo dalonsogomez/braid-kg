@@ -5,15 +5,15 @@ from pathlib import Path
 
 import duckdb
 
-from wikiforge.ducklake import WikiForgeCatalog
+from braid.ducklake import BraidCatalog
 
 
 def _catalog(tmp_path: Path) -> tuple[str, Path, Path]:
     catalog = f"ducklake:duckdb:{tmp_path / 'catalog'}"
     con = duckdb.connect()
     con.execute("LOAD ducklake")
-    con.execute(f"ATTACH '{catalog}' AS wikiforge")
-    con.execute("USE wikiforge")
+    con.execute(f"ATTACH '{catalog}' AS braid")
+    con.execute("USE braid")
     con.execute(
         """
         CREATE TABLE kg_nodes (
@@ -137,7 +137,7 @@ def _catalog(tmp_path: Path) -> tuple[str, Path, Path]:
     fts.execute(
         """
         INSERT INTO rag_chunks_fts
-        VALUES (1, 'DuckDB catalog opens local parquet files for exact code retrieval', 'src/db.py', 'code', 'Fairlead')
+        VALUES (1, 'DuckDB catalog opens local parquet files for exact code retrieval', 'src/db.py', 'code', 'Braid')
         """
     )
     fts.execute("PRAGMA create_fts_index('rag_chunks_fts', 'id', 'content')")
@@ -164,11 +164,11 @@ def test_hybrid_search_combines_fts_vector_graph_and_global_prompts(tmp_path: Pa
         ],
     )
 
-    with WikiForgeCatalog(catalog=catalog, fts_path=fts_path, lancedb_path=lancedb_path) as cat:
+    with BraidCatalog(catalog=catalog, fts_path=fts_path, lancedb_path=lancedb_path) as cat:
         cat.store_rag_chunk(
             "chunk-1",
-            "Fairlead",
-            "Fairlead",
+            "Braid",
+            "Braid",
             "DuckDB local global prompt source for the repository",
             source_path="src/db.py",
             chunk_index=0,
@@ -177,7 +177,7 @@ def test_hybrid_search_combines_fts_vector_graph_and_global_prompts(tmp_path: Pa
             "node-db",
             "Class",
             "DuckDBCatalog",
-            "Fairlead",
+            "Braid",
             description="DuckDB local retrieval pipeline",
             source_path="src/db.py",
             valid_from=datetime(2026, 1, 1),
@@ -187,7 +187,7 @@ def test_hybrid_search_combines_fts_vector_graph_and_global_prompts(tmp_path: Pa
             "node-vector",
             "Function",
             "vector_search",
-            "Fairlead",
+            "Braid",
             source_path="src/vector.py",
             valid_from=datetime(2026, 1, 1),
             commit_sha="a" * 40,
@@ -196,14 +196,14 @@ def test_hybrid_search_combines_fts_vector_graph_and_global_prompts(tmp_path: Pa
             "CALLS",
             "node-db",
             "node-vector",
-            "Fairlead",
+            "Braid",
             valid_from=datetime(2026, 1, 1),
             commit_sha="a" * 40,
         )
 
         result = cat.hybrid_search(
             "DuckDB",
-            project_slug="Fairlead",
+            project_slug="Braid",
             query_embedding=[1.0, 0.0],
             top_k=3,
             global_prompt_chars=1200,
@@ -220,23 +220,23 @@ def test_versioned_graph_can_query_past_edges_after_compaction(tmp_path: Path) -
     t1 = datetime(2026, 1, 1)
     t2 = datetime(2026, 2, 1)
 
-    with WikiForgeCatalog(catalog=catalog, fts_path=fts_path, lancedb_path=lancedb_path) as cat:
-        cat.store_kg_node("node-a", "Function", "a", "Fairlead", valid_from=t1, commit_sha="a" * 40)
-        cat.store_kg_node("node-b", "Function", "b", "Fairlead", valid_from=t1, commit_sha="a" * 40)
-        cat.store_kg_edge("CALLS", "node-a", "node-b", "Fairlead", valid_from=t1, commit_sha="a" * 40)
+    with BraidCatalog(catalog=catalog, fts_path=fts_path, lancedb_path=lancedb_path) as cat:
+        cat.store_kg_node("node-a", "Function", "a", "Braid", valid_from=t1, commit_sha="a" * 40)
+        cat.store_kg_node("node-b", "Function", "b", "Braid", valid_from=t1, commit_sha="a" * 40)
+        cat.store_kg_edge("CALLS", "node-a", "node-b", "Braid", valid_from=t1, commit_sha="a" * 40)
 
-        assert cat.get_node_edges("node-a", project_slug="Fairlead", as_of=datetime(2026, 1, 15))
+        assert cat.get_node_edges("node-a", project_slug="Braid", as_of=datetime(2026, 1, 15))
 
         cat.close_stale_graph_records(
-            "Fairlead",
+            "Braid",
             active_node_ids=["node-a"],
             active_edges=[],
             valid_to=t2,
             commit_sha="b" * 40,
         )
 
-        assert cat.get_node_edges("node-a", project_slug="Fairlead") == []
-        historical = cat.get_node_edges("node-a", project_slug="Fairlead", as_of=datetime(2026, 1, 15))
+        assert cat.get_node_edges("node-a", project_slug="Braid") == []
+        historical = cat.get_node_edges("node-a", project_slug="Braid", as_of=datetime(2026, 1, 15))
 
     assert historical[0]["target"] == "node-b"
     assert historical[0]["valid_to"] == t2
@@ -245,13 +245,13 @@ def test_versioned_graph_can_query_past_edges_after_compaction(tmp_path: Path) -
 def test_compact_memory_collapses_five_conversations_into_project_memory(tmp_path: Path) -> None:
     catalog, fts_path, lancedb_path = _catalog(tmp_path)
 
-    with WikiForgeCatalog(catalog=catalog, fts_path=fts_path, lancedb_path=lancedb_path) as cat:
+    with BraidCatalog(catalog=catalog, fts_path=fts_path, lancedb_path=lancedb_path) as cat:
         for idx in range(5):
             conversation_id = f"debug-{idx}"
             cat.store_conversation(
                 conversation_id,
                 "codex",
-                project_slug="Fairlead",
+                project_slug="Braid",
                 session_type="debugging",
                 summary="debugging schema decision",
             )
@@ -263,8 +263,8 @@ def test_compact_memory_collapses_five_conversations_into_project_memory(tmp_pat
                 tokens_used=10,
             )
 
-        result = cat.compact_memory("Fairlead", min_conversations=5)
-        rows = cat.search_project_memory(result["key"], project_slug="Fairlead")
+        result = cat.compact_memory("Braid", min_conversations=5)
+        rows = cat.search_project_memory(result["key"], project_slug="Braid")
 
     assert result["compacted"] is True
     assert result["source_turn_count"] == 5

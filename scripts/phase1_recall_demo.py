@@ -1,7 +1,7 @@
 """Demo de criterio de salida Fase 1: cognify mini + promote-decision + recall.
 
 Reset cognee_system corrupto + cognify de 3 archivos (AGENTS.md, Plan 0002, ADR 0006)
-para demo end-to-end del flujo "promote-decision -> recall via fairlead ask".
+para demo end-to-end del flujo "promote-decision -> recall via braid ask".
 """
 from __future__ import annotations
 
@@ -12,21 +12,21 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from wikiforge.config import apply_stack_env
-from wikiforge.paths import load_secrets_into_env
-from wikiforge.runner import annotate_file
+from braid.config import apply_stack_env
+from braid.paths import load_secrets_into_env
+from braid.runner import annotate_file
 
 
 REPO = Path(__file__).resolve().parents[1]
-DATASET = "WikiForge"
+DATASET = "Braid"
 COGNEE_SYSTEM = REPO / ".venv/lib/python3.13/site-packages/cognee/.cognee_system"
 
 
 KEY_FILES = [
     REPO / "AGENTS.md",
-    REPO / ".memory" / "plans" / "0002-fase-1-bootstrap.md",
-    REPO / ".memory" / "decisions" / "0006-env-litellm-colon-dodge.md",
-    REPO / ".memory" / "MEMORY.md",
+    REPO / ".braid" / "memory" / "plans" / "0002-fase-1-bootstrap.md",
+    REPO / ".braid" / "memory" / "decisions" / "0006-env-litellm-colon-dodge.md",
+    REPO / ".braid" / "memory" / "MEMORY.md",
 ]
 
 

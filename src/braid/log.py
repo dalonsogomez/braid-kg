@@ -1,10 +1,10 @@
-"""Structured JSON logging for Fairlead.
+"""Structured JSON logging for Braid.
 
 AGENTS.md sec. 3: "Logs JSON estructurados a stdout."
 
 Usage:
-    from wikiforge.log import get_logger
-    log = get_logger("fairlead.ask")
+    from braid.log import get_logger
+    log = get_logger("braid.ask")
     log.info("search_completed", query="Ollama", results=5, elapsed_ms=120)
 """
 from __future__ import annotations
@@ -22,7 +22,7 @@ class JSONLogger:
     Outputs one JSON object per line to stdout. Each line contains:
     - timestamp: ISO 8601 UTC
     - level: INFO, WARN, ERROR
-    - logger: dot-separated name (e.g. "fairlead.ask")
+    - logger: dot-separated name (e.g. "braid.ask")
     - event: human-readable event name
     - plus any extra key-value pairs
     """

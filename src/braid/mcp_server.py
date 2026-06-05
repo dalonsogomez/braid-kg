@@ -1,18 +1,18 @@
-"""Fairlead MCP Server — exposes Fairlead capabilities as MCP tools.
+"""Braid MCP Server — exposes Braid capabilities as MCP tools.
 
 AGENTS.md sec. 2.1: "MCP-first como protocolo único de consumo."
 
 This server provides 5 tools:
-- fairlead_search: Search DuckLake FTS + Cognee with context resolution
-- fairlead_memory: Read/write 3-level memory (session/project/global)
-- fairlead_adrs: Query active ADRs
-- fairlead_status: Project status summary
-- fairlead_kg: Knowledge graph subgraph traversal
+- braid_search: Search DuckLake FTS + Cognee with context resolution
+- braid_memory: Read/write 3-level memory (session/project/global)
+- braid_adrs: Query active ADRs
+- braid_status: Project status summary
+- braid_kg: Knowledge graph subgraph traversal
 
 Run with:
-    fairlead mcp-serve
+    braid mcp-serve
     # or directly:
-    python -m wikiforge.mcp_server
+    python -m braid.mcp_server
 """
 from __future__ import annotations
 
@@ -32,11 +32,11 @@ from .paths import resolve_context
 
 TOOLS: list[Tool] = [
     Tool(
-        name="fairlead_search",
+        name="braid_search",
         description=(
-            "Search Fairlead for information about the active project. "
+            "Search Braid for information about the active project. "
             "Combines DuckLake FTS (BM25) and Cognee vector search. "
-            "Resolves project context automatically (cwd → git root → .kgconfig → global)."
+            "Resolves project context automatically (cwd -> git root -> .braid/config.toml -> global)."
         ),
         inputSchema={
             "type": "object",
@@ -55,9 +55,9 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
-        name="fairlead_memory",
+        name="braid_memory",
         description=(
-            "Read or write Fairlead 3-level memory. "
+            "Read or write Braid 3-level memory. "
             "Levels: session (volatile), project (persistent, linked to git root), "
             "global (cross-project fallback). "
             "Promotion is always manual (AGENTS.md sec. 4.2 golden rule)."
@@ -87,7 +87,7 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
-        name="fairlead_adrs",
+        name="braid_adrs",
         description=(
             "Query Architecture Decision Records (ADRs) for the active project. "
             "Returns active ADRs or searches by keyword."
@@ -107,9 +107,9 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
-        name="fairlead_status",
+        name="braid_status",
         description=(
-            "Get Fairlead status for the active project: "
+            "Get Braid status for the active project: "
             "project info, DuckLake catalog summary, memory levels, ADR count."
         ),
         inputSchema={
@@ -119,7 +119,7 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
-        name="fairlead_kg",
+        name="braid_kg",
         description=(
             "Query the Knowledge Graph subgraph for a given node. "
             "Returns connected nodes and edges up to the specified depth."
@@ -166,8 +166,8 @@ async def _handle_search(arguments: dict[str, Any]) -> list[TextContent]:
 
     # 2. DuckLake FTS
     try:
-        from .ducklake import WikiForgeCatalog
-        with WikiForgeCatalog() as cat:
+        from .ducklake import BraidCatalog
+        with BraidCatalog() as cat:
             hybrid = cat.hybrid_search(query, project_slug=ctx.dataset_id, top_k=top_k).as_dict()
             for batch in hybrid["sources"].get("global_prompts", []):
                 prompt = batch.pop("prompt", "")
@@ -192,8 +192,8 @@ async def _handle_search(arguments: dict[str, Any]) -> list[TextContent]:
 
     # 3. DuckLake memory
     try:
-        from .ducklake import WikiForgeCatalog
-        with WikiForgeCatalog() as cat:
+        from .ducklake import BraidCatalog
+        with BraidCatalog() as cat:
             proj = cat.search_project_memory(query, project_slug=ctx.dataset_id)
             if proj:
                 results["sources"]["project_memory"] = [
@@ -218,13 +218,13 @@ async def _handle_memory(arguments: dict[str, Any]) -> list[TextContent]:
     ctx = resolve_context()
 
     try:
-        from .ducklake import WikiForgeCatalog
+        from .ducklake import BraidCatalog
     except ImportError:
         return [TextContent(type="text", text=json.dumps({"error": "DuckLake not available"}))]
 
     result: dict[str, Any] = {"action": action, "level": level}
 
-    with WikiForgeCatalog() as cat:
+    with BraidCatalog() as cat:
         if action == "write":
             if level == "session":
                 sid = cat.store_session_memory(session_id, memory_type, key, value, project_slug=ctx.dataset_id)
@@ -261,11 +261,11 @@ async def _handle_adrs(arguments: dict[str, Any]) -> list[TextContent]:
     query = arguments.get("query", "")
 
     try:
-        from .ducklake import WikiForgeCatalog
+        from .ducklake import BraidCatalog
     except ImportError:
         return [TextContent(type="text", text=json.dumps({"error": "DuckLake not available"}))]
 
-    with WikiForgeCatalog() as cat:
+    with BraidCatalog() as cat:
         if action == "search" and query:
             rows = cat.search_adrs(query)
         else:
@@ -282,14 +282,16 @@ async def _handle_status(arguments: dict[str, Any]) -> list[TextContent]:
             "dataset_id": ctx.dataset_id,
             "root": str(ctx.root),
             "has_kg": ctx.has_kg,
-            "has_kgconfig": (ctx.root / ".kgconfig").is_file(),
+            "has_config": ctx.has_config,
+            "state_dir": str(ctx.braid_dir),
+            "legacy_layout": ctx.legacy_layout,
         },
     }
 
     # DuckLake
     try:
-        from .ducklake import WikiForgeCatalog
-        with WikiForgeCatalog() as cat:
+        from .ducklake import BraidCatalog
+        with BraidCatalog() as cat:
             result["ducklake"] = cat.get_catalog_summary()
     except Exception as e:
         result["ducklake_error"] = str(e)
@@ -309,11 +311,11 @@ async def _handle_kg(arguments: dict[str, Any]) -> list[TextContent]:
     project_slug = arguments.get("project_slug") or resolve_context().dataset_id
 
     try:
-        from .ducklake import WikiForgeCatalog
+        from .ducklake import BraidCatalog
     except ImportError:
         return [TextContent(type="text", text=json.dumps({"error": "DuckLake not available"}))]
 
-    with WikiForgeCatalog() as cat:
+    with BraidCatalog() as cat:
         subgraph = cat.get_subgraph(node_id, depth=depth, project_slug=project_slug)
 
     return [TextContent(type="text", text=json.dumps(subgraph, indent=2, ensure_ascii=False, default=str))]
@@ -323,7 +325,7 @@ async def _handle_kg(arguments: dict[str, Any]) -> list[TextContent]:
 # Server setup
 # ---------------------------------------------------------------------------
 
-app = Server("fairlead")
+app = Server("braid")
 
 
 @app.list_tools()
@@ -334,11 +336,11 @@ async def list_tools() -> list[Tool]:
 @app.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     handlers = {
-        "fairlead_search": _handle_search,
-        "fairlead_memory": _handle_memory,
-        "fairlead_adrs": _handle_adrs,
-        "fairlead_status": _handle_status,
-        "fairlead_kg": _handle_kg,
+        "braid_search": _handle_search,
+        "braid_memory": _handle_memory,
+        "braid_adrs": _handle_adrs,
+        "braid_status": _handle_status,
+        "braid_kg": _handle_kg,
     }
     handler = handlers.get(name)
     if handler is None:

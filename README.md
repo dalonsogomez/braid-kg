@@ -1,42 +1,55 @@
-# Fairlead
+# Braid
 
-Repo-scoped context guidance for coding agents.
+Repo-scoped context, memory, Knowledge Graph, and RAG for coding agents.
 
-MCP-first persistent memory + Knowledge Graph + RAG **per project** for AI dev tools
-(Claude Code, Codex CLI, Cursor, Cline, Aider, Goose).
+Braid is an MCP-first system for AI development tools such as Claude Code,
+Codex CLI, Cursor, Cline, Aider, and Goose. Its goal is to answer questions
+about the active repository from the code, ADRs, and documentation that are
+actually present in that repository.
 
-Fairlead gives those tools grounded answers about the active repository — the code,
-decisions, and documentation it actually sees — instead of hallucinating from training data.
+The canonical project, package, and CLI name is now `braid`. The previous
+`fairlead` and `wikiforge` names are kept only as transitional aliases and in
+historical ADRs/plans where they are needed for traceability.
 
-> Fairlead fue desarrollado originalmente bajo el codename interno WikiForge.
-> Ver ADR-0001 (`.memory/decisions/ADR-0001-rename-wikiforge-to-fairlead.md`) para la trazabilidad del rename.
+## Project Layout
+
+Project-local operational state lives under `.braid/`:
+
+```text
+.braid/
+  config.toml
+  kg/
+  rag/
+  memory/
+    MEMORY.md
+    decisions/
+    plans/
+    eval/questions.json
+    eval/runs/
+  wiki/
+```
+
+Tool-discovery files stay at repository root because external agents expect
+them there: `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/main.mdc`, and
+`.github/copilot-instructions.md`.
+
+## Quick Start
+
+```bash
+uv venv
+uv pip install -e .
+
+cd ~/Developer/my-project
+braid init
+braid index
+braid ask "What does this repo do?"
+```
 
 ## Status
 
-- **Fase 0** (núcleo): ✅ PASS 4.0/5.0 (2026-05-03). Tag `wf-fase-0-completed-2026-05-03`.
-- **Fase 1** (gobierno): ✅ PASS (2026-05-03). CLI `fairlead`, perfil global, dogfooding activo.
-- **Fase 2** (calidad medida): 🚧 en curso — suite `fairlead eval`, reranker cloud, baseline registrado.
+- Phase 0: PASS, repository-grounded recall baseline.
+- Phase 1: PASS, CLI/governance/manual promotion flow.
+- Phase 2: in progress, `braid eval`, DuckLake catalog, reranking, and quality measurement.
 
-Ver `AGENTS.md` (canonical) y `.memory/MEMORY.md` (índice operacional) para el detalle.
-
-## Quick start
-
-```bash
-# Instalar el CLI (modo editable)
-uv venv && uv pip install -e .
-
-# En el repo donde quieres memoria
-cd ~/Developer/mi-proyecto
-fairlead init
-fairlead index
-fairlead ask "What does this repo do?"
-```
-
-## Stack vigente
-
-Ver ADR 0005 + ADR 0006 en `.memory/decisions/`. Resumen: Cognee 1.0 + Ollama Cloud
-`kimi-k2.6:cloud` + bge-m3 local + Kuzu + LanceDB.
-
-## Contrato canónico
-
-`AGENTS.md` en la raíz. Modificarlo requiere ADR (anti-patrón #5).
+See `AGENTS.md` for the canonical architecture and `.braid/memory/MEMORY.md`
+for the operational memory index.

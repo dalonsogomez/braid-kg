@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "dataset_id": "WikiForge",
+  "dataset_id": "Braid",
   "scoring": {
     "match": "substring",
     "search_types": ["CHUNKS", "SUMMARIES"],
@@ -11,15 +11,15 @@
     {
       "id": "Q01",
       "kind": "CONTAINS",
-      "query": "¿Qué hace la función run_session_start del CLI wikiforge? ¿Qué imprime cuando el repo no está inicializado?",
+      "query": "¿Qué hace la función run_session_start del CLI braid? ¿Qué imprime cuando el repo no está inicializado?",
       "expected_any_of": [
         "claude.py",
         "claude-session-start",
         "repo no inicializado",
-        "[WikiForge]"
+        "[Braid]"
       ],
       "expected_top_1": [
-        "src/wikiforge/commands/claude.py"
+        "src/braid/commands/claude.py"
       ],
       "notes": "Símbolo nuevo del CLI introducido por ADR 0009."
     },
@@ -73,12 +73,12 @@
     {
       "id": "Q05",
       "kind": "MENTIONS",
-      "query": "¿Cómo resuelve WikiForge el contexto de proyecto activo? ¿En qué orden busca?",
+      "query": "¿Cómo resuelve Braid el contexto de proyecto activo? ¿En qué orden busca?",
       "expected_any_of": [
         "4.3",
         "cwd",
         "git root",
-        ".kgconfig",
+        ".braid/config.toml",
         "fallback_threshold",
         "perfil global"
       ],
@@ -99,14 +99,14 @@
         "TimeoutError"
       ],
       "expected_top_1": [
-        "src/wikiforge/runner.py"
+        "src/braid/runner.py"
       ],
       "notes": "Mitigación TODO #2 plan 0003 → ADR 0009."
     },
     {
       "id": "Q07",
       "kind": "IMPORTS",
-      "query": "¿Qué archivos del paquete wikiforge importan find_git_root desde el módulo paths?",
+      "query": "¿Qué archivos del paquete braid importan find_git_root desde el módulo paths?",
       "expected_any_of": [
         "find_git_root",
         "paths",
@@ -115,7 +115,7 @@
         "commands/index.py"
       ],
       "expected_top_1": [
-        "src/wikiforge/commands/"
+        "src/braid/commands/"
       ],
       "notes": "Relación IMPORTS/CALLS — paths.find_git_root es callsite múltiple."
     },
@@ -139,7 +139,7 @@
     {
       "id": "Q09",
       "kind": "DOCUMENTS",
-      "query": "¿Qué stack canónico usa WikiForge para LLM y embeddings? Cita el ADR vigente.",
+      "query": "¿Qué stack canónico usa Braid para LLM y embeddings? Cita el ADR vigente.",
       "expected_any_of": [
         "0005",
         "kimi-k2.6:cloud",
@@ -156,7 +156,7 @@
     {
       "id": "Q10",
       "kind": "CONTAINS",
-      "query": "¿Qué subcomando de wikiforge cablea hooks SessionStart en el settings.json del git_root y es idempotente?",
+      "query": "¿Qué subcomando de braid cablea hooks SessionStart en el settings.json del git_root y es idempotente?",
       "expected_any_of": [
         "claude-init",
         "claude.py",
@@ -166,7 +166,7 @@
         "matcher"
       ],
       "expected_top_1": [
-        "src/wikiforge/commands/claude.py"
+        "src/braid/commands/claude.py"
       ],
       "notes": "Comando complementario del Q01 — hook installer."
     }

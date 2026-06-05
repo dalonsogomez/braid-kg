@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Sync Fairlead DuckLake catalog to MotherDuck cloud.
+"""Sync Braid DuckLake catalog to MotherDuck cloud.
 
 Usage:
     python scripts/sync_motherduck.py [--direction push|pull] [--tables all|table1,table2]
 
 Environment:
     MOTHERDUCK_TOKEN  — API token from https://app.motherduck.com/ → Settings → Access Tokens
-                        Or set in ~/.config/fairlead/secrets.env
+                        Or set in ~/.config/braid/secrets.env
 
 Sync tables:
     project_memory, global_memory, adrs, kg_nodes, kg_edges,
@@ -24,13 +24,11 @@ from datetime import datetime, timezone
 
 # ── Config ──────────────────────────────────────────────────────────────
 
-DUCKLAKE_CATALOG = (
-    "ducklake:duckdb:"
-    "/Users/dalonsogomez/Developer/claude/code-projects/WikiForge/.kg/wikiforge_ducklake"
-)
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DUCKLAKE_CATALOG = f"ducklake:duckdb:{REPO_ROOT / '.braid' / 'kg' / 'braid_ducklake'}"
 MOTHERDUCK_DB = "md:my_db"
-MOTHERDUCK_SCHEMA = "wikiforge"
-SECRETS_PATH = Path.home() / ".config/fairlead/secrets.env"
+MOTHERDUCK_SCHEMA = "braid"
+SECRETS_PATH = Path.home() / ".config/braid/secrets.env"
 
 SYNC_TABLES = [
     "session_memory",
@@ -70,7 +68,7 @@ def _load_token() -> str:
                     return token
 
     print("ERROR: MOTHERDUCK_TOKEN not found.", file=sys.stderr)
-    print("Set it in ~/.config/fairlead/secrets.env or as env var.", file=sys.stderr)
+    print("Set it in ~/.config/braid/secrets.env or as env var.", file=sys.stderr)
     sys.exit(1)
 
 
@@ -99,7 +97,7 @@ def push_tables(con, tables: list[str]) -> dict[str, int]:
     Uses DELETE + INSERT to avoid duplicates.
     """
     results = {}
-    with tempfile.TemporaryDirectory(prefix="wf_sync_") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="braid_sync_") as tmpdir:
         for table in tables:
             parquet_path = Path(tmpdir) / f"{table}.parquet"
             print(f"  Exporting {table}...", end=" ", flush=True)
@@ -147,7 +145,7 @@ def pull_tables(con, tables: list[str]) -> dict[str, int]:
     Uses DELETE + INSERT to avoid duplicates.
     """
     results = {}
-    with tempfile.TemporaryDirectory(prefix="wf_sync_") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="braid_sync_") as tmpdir:
         for table in tables:
             parquet_path = Path(tmpdir) / f"{table}.parquet"
             print(f"  Pulling {table}...", end=" ", flush=True)
@@ -190,7 +188,7 @@ def pull_tables(con, tables: list[str]) -> dict[str, int]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Sync Fairlead DuckLake ↔ MotherDuck")
+    parser = argparse.ArgumentParser(description="Sync Braid DuckLake ↔ MotherDuck")
     parser.add_argument(
         "--direction",
         choices=["push", "pull"],
@@ -207,7 +205,7 @@ def main():
     tables = SYNC_TABLES if args.tables == "all" else args.tables.split(",")
     token = _load_token()
 
-    print(f"Fairlead DuckLake ↔ MotherDuck Sync")
+    print(f"Braid DuckLake ↔ MotherDuck Sync")
     print(f"Direction: {args.direction}")
     print(f"Tables: {', '.join(tables)}")
     print()

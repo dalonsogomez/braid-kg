@@ -1,7 +1,7 @@
-"""`fairlead eval`: ejecuta la suite de preguntas declarada en `.memory/eval/questions.json`.
+"""`braid eval`: run the grounding suite declared in `.braid/memory/eval/questions.json`.
 
 ADR 0010. Scoring por substring + recall@1 / recall@K. Resultado JSON guardado en
-`.memory/eval/runs/<ISO>.json`.
+`.braid/memory/eval/runs/<ISO>.json`.
 
 Robustez (post-review): validación temprana de questions.json, captura de OSError en
 escritura de run, captura de JSONDecodeError, _extract_text defensivo ante listas/None,
@@ -23,8 +23,8 @@ from ..paths import resolve_context
 from ..runner import rerank_via_openrouter, run_search
 
 
-DEFAULT_QUESTIONS = ".memory/eval/questions.json"
-RUNS_SUBDIR = ".memory/eval/runs"
+DEFAULT_QUESTIONS = "eval/questions.json"
+RUNS_SUBDIR = "eval/runs"
 DEFAULT_TOP_K = 10
 DEFAULT_PER_QUESTION_TIMEOUT = 90.0
 DEFAULT_TOP_1_BONUS = 0.5
@@ -148,17 +148,17 @@ def _print_table(per_q: list[dict], totals: dict) -> None:
     )
 
 
-def _save_run(root: Path, run: dict) -> Path | None:
+def _save_run(memory_dir: Path, run: dict) -> Path | None:
     """Guarda el run; si el filesystem rechaza, devuelve None y se imprime fallback."""
     try:
-        runs_dir = root / RUNS_SUBDIR
+        runs_dir = memory_dir / RUNS_SUBDIR
         runs_dir.mkdir(parents=True, exist_ok=True)
         out = runs_dir / f"{run['timestamp']}.json"
         out.write_text(json.dumps(run, indent=2, ensure_ascii=False) + "\n")
         return out
     except OSError as e:
-        print(f"[fairlead eval] no se pudo guardar el run en disco: {e}", file=sys.stderr)
-        print("[fairlead eval] dump del run a stdout para no perder datos:", file=sys.stderr)
+        print(f"[braid eval] no se pudo guardar el run en disco: {e}", file=sys.stderr)
+        print("[braid eval] dump del run a stdout para no perder datos:", file=sys.stderr)
         sys.stdout.write(json.dumps(run, indent=2, ensure_ascii=False) + "\n")
         return None
 
@@ -210,11 +210,11 @@ def run(
     rerank: bool = False,
 ) -> int:
     ctx = resolve_context()
-    qp = Path(questions_path) if questions_path else (ctx.root / DEFAULT_QUESTIONS)
+    qp = Path(questions_path) if questions_path else (ctx.memory_dir / DEFAULT_QUESTIONS)
     if not qp.is_file():
         print(
-            f"[fairlead eval] no encuentro questions en {qp}\n"
-            "Crea `.memory/eval/questions.json` (ver ADR 0010 para formato).",
+            f"[braid eval] no encuentro questions en {qp}\n"
+            "Crea `.braid/memory/eval/questions.json` (ver ADR 0010 para formato).",
             file=sys.stderr,
         )
         return 1
@@ -222,16 +222,16 @@ def run(
     try:
         suite = json.loads(qp.read_text())
     except json.JSONDecodeError as e:
-        print(f"[fairlead eval] {qp} no es JSON válido: {e}", file=sys.stderr)
+        print(f"[braid eval] {qp} no es JSON válido: {e}", file=sys.stderr)
         return 1
     except OSError as e:
-        print(f"[fairlead eval] no se pudo leer {qp}: {e}", file=sys.stderr)
+        print(f"[braid eval] no se pudo leer {qp}: {e}", file=sys.stderr)
         return 1
 
     try:
         questions = _validate_suite(suite, qp)
     except ValueError as e:
-        print(f"[fairlead eval] {e}", file=sys.stderr)
+        print(f"[braid eval] {e}", file=sys.stderr)
         return 1
 
     scoring = suite.get("scoring") if isinstance(suite.get("scoring"), dict) else {}
@@ -245,7 +245,7 @@ def run(
     primary_st = search_types[0]
 
     print(
-        f"[fairlead eval] dataset={dataset_id} root={ctx.root} "
+        f"[braid eval] dataset={dataset_id} root={ctx.root} "
         f"questions={len(questions)} search_types={search_types} top_k={effective_top_k} "
         f"timeout={timeout_s:.0f}s rerank={rerank}"
     )
@@ -302,10 +302,10 @@ def run(
     }
 
     if save:
-        out = _save_run(ctx.root, run_doc)
+        out = _save_run(ctx.memory_dir, run_doc)
         if out is not None:
-            print(f"\n[fairlead eval] run guardado en {out}")
+            print(f"\n[braid eval] run guardado en {out}")
     else:
-        print("\n[fairlead eval] --no-save: run NO guardado")
+        print("\n[braid eval] --no-save: run NO guardado")
 
     return 0

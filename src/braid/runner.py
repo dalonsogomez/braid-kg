@@ -62,7 +62,7 @@ async def cognify(dataset: str, timeout: float = 120.0) -> None:
     except asyncio.TimeoutError:
         # Mitigación documentada en ADR 0009. Datos íntegros.
         print(
-            f"[fairlead runner] cognify timeout tras {timeout:.0f}s "
+            f"[braid runner] cognify timeout tras {timeout:.0f}s "
             "(cleanup hang upstream cognee 1.0.5) — datos íntegros"
         )
 
@@ -75,7 +75,7 @@ async def search(query: str, dataset: str, search_type: str = "CHUNKS", top_k: i
 
 
 async def prune_all() -> None:
-    """Limpia data + system. Destructivo — solo desde `fairlead index --rebuild`."""
+    """Limpia data + system. Destructivo — solo desde `braid index --rebuild`."""
     _ensure_env()
     import cognee  # noqa: PLC0415
     await cognee.prune.prune_data()
@@ -168,8 +168,8 @@ def rerank_via_openrouter(
     key = _get_openrouter_key()
     if not key:
         print(
-            "[fairlead rerank] OPENROUTER_API_KEY ausente — devuelvo top_n sin reordenar "
-            "(degraded mode). Añade la key a ~/.config/fairlead/secrets.env para activar.",
+            "[braid rerank] OPENROUTER_API_KEY ausente — devuelvo top_n sin reordenar "
+            "(degraded mode). Añade la key a ~/.config/braid/secrets.env para activar.",
             file=sys.stderr,
         )
         return items[:top_n]
@@ -178,7 +178,7 @@ def rerank_via_openrouter(
         import httpx  # noqa: PLC0415  — dep optativa, ya está en pyproject por commands/review.py
     except ImportError:
         print(
-            "[fairlead rerank] httpx no instalado — devuelvo top_n sin reordenar "
+            "[braid rerank] httpx no instalado — devuelvo top_n sin reordenar "
             "(degraded mode). `uv pip install httpx`.",
             file=sys.stderr,
         )
@@ -201,15 +201,15 @@ def rerank_via_openrouter(
         response.raise_for_status()
         data = response.json()
     except httpx.HTTPError as e:
-        print(f"[fairlead rerank] HTTP error: {type(e).__name__}: {e} — degraded mode", file=sys.stderr)
+        print(f"[braid rerank] HTTP error: {type(e).__name__}: {e} — degraded mode", file=sys.stderr)
         return items[:top_n]
     except (ValueError, KeyError) as e:
-        print(f"[fairlead rerank] respuesta inesperada de OpenRouter: {e} — degraded mode", file=sys.stderr)
+        print(f"[braid rerank] respuesta inesperada de OpenRouter: {e} — degraded mode", file=sys.stderr)
         return items[:top_n]
 
     results = data.get("results") or []
     if not results:
-        print("[fairlead rerank] respuesta vacía — degraded mode", file=sys.stderr)
+        print("[braid rerank] respuesta vacía — degraded mode", file=sys.stderr)
         return items[:top_n]
 
     reordered: list[Any] = []

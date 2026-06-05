@@ -7,11 +7,19 @@ secrets.env
 *.secret
 *.key
 
-# Cognee runtime data (Nivel 1 persistente) - se reconstruye desde el código
+# Braid runtime data (rebuildable from code + tracked human memory)
+.braid/kg/
+.braid/rag/
+.braid/wiki/
+.braid/memory/sessions/
+.braid/memory/persistent/
+.braid/memory/decisions/*-test.md
+.braid/memory/eval/runs/*.json
+!.braid/memory/eval/runs/baseline-*.json
+
+# Legacy runtime data from pre-.braid layouts; read only for migration
 .kg/
 .rag/
-
-# Sesiones de memoria volátil (Nivel 0)
 .memory/sessions/
 .memory/decisions/*-test.md
 
@@ -40,6 +48,7 @@ projects/
 
 # Local databases and generated binaries
 *.db
+/braid
 /wikiforge
 
 # Logs

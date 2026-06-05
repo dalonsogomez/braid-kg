@@ -1,4 +1,4 @@
-"""`fairlead promote-decision`, `promote-to-global`, `demote` — promoción manual de memoria.
+"""`braid promote-decision`, `promote-to-global`, `demote` — promoción manual de memoria.
 
 Regla de oro AGENTS.md sec. 4.2: NO existe promoción automática.
 """
@@ -20,7 +20,7 @@ ADR_TEMPLATE = """\
 - **Fecha:** {date}
 - **Decisor:** {decisor}
 - **Tags:** {tags}
-- **Origen:** promoción manual sesión → proyecto vía `fairlead promote-decision`
+- **Origen:** promoción manual sesión → proyecto vía `braid promote-decision`
 
 ---
 
@@ -51,7 +51,7 @@ def run_promote_decision(text: str, title: str | None = None, tags: str = "") ->
     ctx = resolve_context()
     decisions_dir = ctx.memory_dir / "decisions"
     if not decisions_dir.is_dir():
-        print(f"[promote-decision] no existe {decisions_dir} — corre `fairlead init` primero.", file=sys.stderr)
+        print(f"[promote-decision] no existe {decisions_dir} — corre `braid init` primero.", file=sys.stderr)
         return 1
 
     title = title or text.split(".")[0][:80]
@@ -73,8 +73,8 @@ def run_promote_decision(text: str, title: str | None = None, tags: str = "") ->
 
     # Also store in DuckLake catalog for SQL-queryable access
     try:
-        from ..ducklake import WikiForgeCatalog
-        with WikiForgeCatalog() as cat:
+        from ..ducklake import BraidCatalog
+        with BraidCatalog() as cat:
             cat.store_adr(num, title, "Active", text, text, project_slug=ctx.dataset_id)
         print(f"[promote-decision] ADR {num} también registrado en DuckLake catalog.")
     except Exception as e:
@@ -85,7 +85,7 @@ def run_promote_decision(text: str, title: str | None = None, tags: str = "") ->
 
 
 def run_promote_to_global(decision_id: str) -> int:
-    """Copia un ADR del proyecto al perfil global (`~/.fairlead/profile/decisions/`)."""
+    """Copia un ADR del proyecto al perfil global (`~/.braid/profile/decisions/`)."""
     ctx = resolve_context()
     decisions_dir = ctx.memory_dir / "decisions"
     matches = list(decisions_dir.glob(f"{decision_id}*.md")) or list(decisions_dir.glob(f"*{decision_id}*.md"))
@@ -104,7 +104,7 @@ def run_promote_to_global(decision_id: str) -> int:
 
 
 def run_demote(decision_id: str) -> int:
-    """Mueve un ADR a `.memory/decisions/_demoted/` para mantener trazabilidad sin que cuente como Active."""
+    """Mueve un ADR a `.braid/memory/decisions/_demoted/` para mantener trazabilidad sin que cuente como Active."""
     ctx = resolve_context()
     decisions_dir = ctx.memory_dir / "decisions"
     matches = list(decisions_dir.glob(f"{decision_id}*.md"))

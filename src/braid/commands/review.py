@@ -1,9 +1,9 @@
-"""``fairlead review`` — lanza los 3 modelos de ZenMux en paralelo y consolida resultados.
+"""``braid review`` — lanza los 3 modelos de ZenMux en paralelo y consolida resultados.
 
 Uso:
-    fairlead review "<diff o descripción del cambio>"
-    fairlead review --system-prompt "Eres revisor experto" "<código a revisar>"
-    fairlead review --models opus-4-7-think,gpt-5-3-codex "<código>"
+    braid review "<diff o descripción del cambio>"
+    braid review --system-prompt "Eres revisor experto" "<código a revisar>"
+    braid review --models opus-4-7-think,gpt-5-3-codex "<código>"
 """
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def run(
 
     sp = system_prompt or DEFAULT_SYSTEM_PROMPT
 
-    print("[fairlead review] modelos:", ", ".join(models))
+    print("[braid review] modelos:", ", ".join(models))
     print()
 
     results = review_in_parallel(
@@ -63,11 +63,11 @@ def run(
             print()
 
     if errors == len(results):
-        print("[fairlead review] TODOS los modelos fallaron — revisa tu ZENMUX_API_KEY y red.")
+        print("[braid review] TODOS los modelos fallaron — revisa tu ZENMUX_API_KEY y red.")
         return 1
 
     if errors > 0:
-        print(f"[fairlead review] {errors}/{len(results)} modelos fallaron — parcial.")
+        print(f"[braid review] {errors}/{len(results)} modelos fallaron — parcial.")
 
     return 0
 

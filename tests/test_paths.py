@@ -1,16 +1,16 @@
-"""Tests for fairlead paths (wikiforge.paths) — context resolution, git root, kgconfig."""
+"""Tests for Braid path and context resolution."""
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
-from wikiforge.paths import (
+from braid.paths import (
     GLOBAL_DATASET_ID,
     PROFILE_DIR,
     ProjectContext,
+    config_path,
+    find_braid_root,
     find_git_root,
     find_kg_root,
     load_kgconfig,
@@ -20,116 +20,128 @@ from wikiforge.paths import (
 
 
 class TestFindGitRoot:
-    def test_finds_real_git_root(self, tmp_path):
-        """find_git_root uses `git rev-parse` which requires a real git repo."""
+    def test_finds_real_git_root(self, tmp_path: Path):
         import subprocess
+
         root = tmp_path / "real-git-project"
         root.mkdir()
         subprocess.run(["git", "init"], cwd=root, capture_output=True, check=True)
-        result = find_git_root(root)
-        assert result == root
+        assert find_git_root(root) == root
 
-    def test_returns_none_outside_git(self, tmp_path):
-        result = find_git_root(tmp_path)
-        assert result is None
+    def test_returns_none_outside_git(self, tmp_path: Path):
+        assert find_git_root(tmp_path) is None
 
-    def test_finds_from_subdirectory(self, tmp_path):
+    def test_finds_from_subdirectory(self, tmp_path: Path):
         import subprocess
+
         root = tmp_path / "real-git-project"
         root.mkdir()
         subprocess.run(["git", "init"], cwd=root, capture_output=True, check=True)
         subdir = root / "src" / "deep"
         subdir.mkdir(parents=True)
-        result = find_git_root(subdir)
-        assert result == root
+        assert find_git_root(subdir) == root
 
 
-class TestFindKgRoot:
-    def test_finds_kg_dir(self, tmp_git_root):
-        result = find_kg_root(tmp_git_root)
-        assert result == tmp_git_root
+class TestFindBraidRoot:
+    def test_finds_braid_dir(self, tmp_git_root: Path):
+        assert find_braid_root(tmp_git_root) == tmp_git_root
 
-    def test_finds_kgconfig(self, tmp_path):
+    def test_finds_canonical_config(self, tmp_path: Path):
         root = tmp_path / "project"
-        root.mkdir()
-        (root / ".kgconfig").write_text('dataset_id = "test"')
-        result = find_kg_root(root)
-        assert result == root
+        (root / ".braid").mkdir(parents=True)
+        (root / ".braid" / "config.toml").write_text('dataset_id = "test"')
+        assert find_braid_root(root) == root
 
-    def test_returns_none_without_kg(self, tmp_path):
-        root = tmp_path / "no-kg-project"
+    def test_finds_legacy_kgconfig(self, tmp_path: Path):
+        root = tmp_path / "legacy-project"
         root.mkdir()
-        result = find_kg_root(root)
-        assert result is None
+        (root / ".kgconfig").write_text('dataset_id = "legacy"')
+        assert find_braid_root(root) == root
+        assert find_kg_root(root) == root
+
+    def test_returns_none_without_state(self, tmp_path: Path):
+        root = tmp_path / "no-braid-project"
+        root.mkdir()
+        assert find_braid_root(root) is None
 
 
 class TestLoadKgconfig:
-    def test_loads_valid_toml(self, tmp_git_root, kgconfig_content):
-        (tmp_git_root / ".kgconfig").write_text(kgconfig_content)
+    def test_prefers_canonical_config(self, tmp_git_root: Path, kgconfig_content: str):
+        (tmp_git_root / ".kgconfig").write_text('dataset_id = "legacy"')
+        config_path(tmp_git_root).write_text(kgconfig_content)
         cfg = load_kgconfig(tmp_git_root)
         assert cfg["dataset_id"] == "test-project"
         assert cfg["graph_backend"] == "kuzu"
         assert cfg["fallback_threshold"] == 0.55
 
-    def test_returns_empty_on_missing(self, tmp_path):
-        cfg = load_kgconfig(tmp_path)
-        assert cfg == {}
+    def test_reads_legacy_config_when_canonical_missing(self, tmp_path: Path):
+        root = tmp_path / "legacy"
+        root.mkdir()
+        (root / ".kgconfig").write_text('dataset_id = "legacy-project"')
+        assert load_kgconfig(root)["dataset_id"] == "legacy-project"
 
-    def test_returns_empty_on_invalid_toml(self, tmp_git_root):
-        (tmp_git_root / ".kgconfig").write_text("this is not valid toml {{{")
-        # tomllib.loads will raise, should be caught
-        # Actually load_kgconfig doesn't catch — let's check
-        try:
-            cfg = load_kgconfig(tmp_git_root)
-        except Exception:
-            pass  # Expected — invalid TOML raises
+    def test_returns_empty_on_missing(self, tmp_path: Path):
+        assert load_kgconfig(tmp_path) == {}
+
+    def test_invalid_toml_raises(self, tmp_git_root: Path):
+        config_path(tmp_git_root).write_text("this is not valid toml {{{")
+        with pytest.raises(Exception):
+            load_kgconfig(tmp_git_root)
 
 
 class TestResolveContext:
-    def test_resolves_kg_root(self, tmp_git_root, kgconfig_content):
-        (tmp_git_root / ".kgconfig").write_text(kgconfig_content)
+    def test_resolves_canonical_braid_root(self, tmp_git_root: Path, kgconfig_content: str):
+        config_path(tmp_git_root).write_text(kgconfig_content)
         ctx = resolve_context(start=tmp_git_root)
         assert ctx.dataset_id == "test-project"
         assert ctx.has_kg is True
         assert ctx.root == tmp_git_root
+        assert ctx.config_path == config_path(tmp_git_root)
+        assert ctx.legacy_layout is False
 
-    def test_resolves_git_root_without_kg(self, tmp_git_root):
-        # No .kgconfig, but has .kg dir
-        ctx = resolve_context(start=tmp_git_root)
-        assert ctx.dataset_id == tmp_git_root.name
+    def test_resolves_git_root_without_braid_state(self, tmp_path: Path):
+        import subprocess
+
+        root = tmp_path / "plain-repo"
+        root.mkdir()
+        subprocess.run(["git", "init"], cwd=root, capture_output=True, check=True)
+        ctx = resolve_context(start=root)
+        assert ctx.dataset_id == root.name
+        assert ctx.has_kg is False
+        assert ctx.has_config is False
+
+    def test_resolves_legacy_layout_for_migration(self, tmp_path: Path):
+        root = tmp_path / "legacy"
+        root.mkdir()
+        (root / ".kg").mkdir()
+        (root / ".kgconfig").write_text('dataset_id = "legacy-project"')
+        ctx = resolve_context(start=root)
+        assert ctx.dataset_id == "legacy-project"
         assert ctx.has_kg is True
+        assert ctx.legacy_layout is True
 
-    def test_fallback_to_global(self, tmp_path):
-        # No git, no kg — should fallback to global profile
+    def test_fallback_to_global(self, tmp_path: Path):
         ctx = resolve_context(start=tmp_path)
         assert ctx.dataset_id == GLOBAL_DATASET_ID
         assert ctx.root == PROFILE_DIR
 
 
 class TestProjectContext:
-    def test_properties(self, tmp_git_root):
-        ctx = ProjectContext(
-            root=tmp_git_root,
-            dataset_id="test",
-            has_kg=True,
-            kgconfig={},
-        )
-        assert ctx.memory_dir == tmp_git_root / ".memory"
-        assert ctx.kg_dir == tmp_git_root / ".kg"
-        assert ctx.rag_dir == tmp_git_root / ".rag"
+    def test_properties(self, tmp_git_root: Path):
+        ctx = ProjectContext(root=tmp_git_root, dataset_id="test", has_kg=True, kgconfig={})
+        assert ctx.braid_dir == tmp_git_root / ".braid"
+        assert ctx.memory_dir == tmp_git_root / ".braid" / "memory"
+        assert ctx.kg_dir == tmp_git_root / ".braid" / "kg"
+        assert ctx.rag_dir == tmp_git_root / ".braid" / "rag"
+        assert ctx.wiki_dir == tmp_git_root / ".braid" / "wiki"
 
-    def test_default_fallback_threshold(self, tmp_git_root):
-        ctx = ProjectContext(
-            root=tmp_git_root,
-            dataset_id="test",
-            has_kg=True,
-            kgconfig={},
-        )
+    def test_default_fallback_threshold(self, tmp_git_root: Path):
+        ctx = ProjectContext(root=tmp_git_root, dataset_id="test", has_kg=True, kgconfig={})
         assert ctx.fallback_threshold == 0.55
 
 
 class TestSecretsPath:
     def test_returns_home_config_path(self):
-        p = secrets_path()
-        assert str(p).endswith(".config/fairlead/secrets.env")
-        assert p.is_absolute()
+        path = secrets_path()
+        assert str(path).endswith(".config/braid/secrets.env")
+        assert path.is_absolute()

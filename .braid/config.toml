@@ -1,4 +1,4 @@
-dataset_id = "Fairlead"
+dataset_id = "Braid"
 graph_backend = "kuzu"
 vector_backend = "lancedb"
 embedder = "bge-m3"
@@ -7,6 +7,6 @@ fallback_threshold = 0.55
 priority = ["active_file", "project_graph", "project_vector", "global_profile"]
 
 [memory]
-temporal_store = ".memory/sessions"
-persistent_store = ".memory/persistent"
+temporal_store = ".braid/memory/sessions"
+persistent_store = ".braid/memory/persistent"
 promotion_policy = "explicit_only"

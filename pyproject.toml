@@ -1,5 +1,5 @@
 [project]
-name = "fairlead"
+name = "braid"
 version = "0.1.0"
 description = "Repo-scoped context guidance for coding agents. MCP-first persistent memory + KG/RAG per project."
 readme = "README.md"
@@ -12,8 +12,9 @@ dependencies = [
 ]
 
 [project.scripts]
-fairlead = "wikiforge.cli:main"
-wikiforge = "wikiforge.cli:legacy_main"
+braid = "braid.cli:main"
+fairlead = "braid.cli:legacy_fairlead_main"
+wikiforge = "braid.cli:legacy_wikiforge_main"
 
 [project.optional-dependencies]
 # Stack ADR 0005 + ADR 0006 (con dodge ladybug del ADR 0007).
@@ -49,10 +50,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/wikiforge"]
+packages = ["src/braid"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/wikiforge"]
+include = ["src/braid"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

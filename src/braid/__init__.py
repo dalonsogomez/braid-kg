@@ -1,4 +1,4 @@
-"""Fairlead — Repo-scoped context guidance for coding agents.
+"""Braid — Repo-scoped context guidance for coding agents.
 
 MCP-first persistent memory + KG/RAG per project.
 Ver AGENTS.md (raíz del repo) para el contrato canónico de decisiones.

@@ -6,7 +6,7 @@ Modelos configurados (slug real de ZenMux):
 - ``google/gemini-3.1-pro-preview`` — visión + razonamiento multimodal
 
 Uso:
-    from wikiforge.zenmux import review_in_parallel
+    from braid.zenmux import review_in_parallel
 
     results = review_in_parallel(system_prompt, user_prompt)
     for r in results:
@@ -67,13 +67,13 @@ def resolve_slug(alias_or_slug: str) -> str:
 
 
 def _get_api_key() -> str:
-    """Obtiene ZENMUX_API_KEY del entorno o de ``~/.config/fairlead/secrets.env``."""
+    """Obtiene ZENMUX_API_KEY del entorno o de ``~/.config/braid/secrets.env``."""
     load_secrets_into_env()
     key = os.environ.get("ZENMUX_API_KEY")
     if not key:
         msg = (
             "ZENMUX_API_KEY no encontrada. "
-            "Añádela a ~/.config/fairlead/secrets.env:\n"
+            "Añádela a ~/.config/braid/secrets.env:\n"
             '  ZENMUX_API_KEY="sk-ss-v1-..."'
         )
         raise OSError(msg)

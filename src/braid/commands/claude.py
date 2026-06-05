@@ -1,4 +1,4 @@
-"""`fairlead claude-session-start` y `fairlead claude-init`.
+"""`braid claude-session-start` y `braid claude-init`.
 
 Pieza ADR 0009. El primero reporta estado de memoria del repo activo en <500 ms
 sin tocar el LLM ni cognee. El segundo cablea el hook SessionStart en
@@ -11,7 +11,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ..paths import find_git_root
+from ..paths import config_path, find_git_root, project_state_dir
 
 
 # Espejo de los globs canónicos definidos en commands/index.py — fuente única
@@ -23,17 +23,20 @@ DEFAULT_DOC_GLOBS = [
     "AGENTS.md",
     "CLAUDE.md",
     "docs/**/*.md",
-    ".memory/**/*.md",
+    ".braid/memory/**/*.md",
 ]
-EXCLUDE_PARTS = {"_backup", "output", "__pycache__", ".venv", ".git", "build", ".kg", ".rag"}
+EXCLUDE_PARTS = {"_backup", "output", "__pycache__", ".venv", ".git", "build", "kg", "rag", "wiki", "sessions"}
 
 INDEX_STATE_FILENAME = "last_index.json"
 
-HOOK_COMMAND = "fairlead claude-session-start"
-HOOK_MARKER = "fairlead claude-session-start"  # substring usado para localizar la entrada al --remove
+HOOK_COMMAND = "braid claude-session-start"
+HOOK_MARKER = "braid claude-session-start"  # substring usado para localizar la entrada al --remove
+LEGACY_HOOK_MARKERS = ("fairlead claude-session-start", "wikiforge claude-session-start")
 
 
 def _is_excluded(p: Path) -> bool:
+    if ".braid" in set(p.parts) and (set(p.parts) & {"kg", "rag", "wiki", "sessions"}):
+        return True
     return bool(set(p.parts) & EXCLUDE_PARTS)
 
 
@@ -95,18 +98,20 @@ def run_session_start(as_json: bool = False) -> int:
         report = {"status": "no_repo", "root": str(Path.cwd())}
         return _emit(report, as_json, message=None)
 
-    kg_dir = root / ".kg"
-    if not kg_dir.is_dir():
+    state_dir = project_state_dir(root)
+    kg_dir = state_dir / "kg"
+    memory_dir = state_dir / "memory"
+    if not state_dir.is_dir() or not config_path(root).is_file():
         report = {"status": "uninitialized", "root": str(root)}
-        msg = "[Fairlead] repo no inicializado · ejecuta 'fairlead init && fairlead index'"
+        msg = "[Braid] repo no inicializado · ejecuta 'braid init && braid index'"
         return _emit(report, as_json, msg)
 
     state = _load_index_state(kg_dir)
-    n_adrs = _count_adrs(root / ".memory")
+    n_adrs = _count_adrs(memory_dir)
 
     if state is None or "timestamp" not in state:
         report = {"status": "indexed_pending", "root": str(root), "nadrs": n_adrs}
-        msg = "[Fairlead] repo inicializado pero no indexado · ejecuta 'fairlead index'"
+        msg = "[Braid] repo inicializado pero no indexado · ejecuta 'braid index'"
         return _emit(report, as_json, msg)
 
     last_ts = float(state.get("timestamp_unix") or 0)
@@ -121,7 +126,7 @@ def run_session_start(as_json: bool = False) -> int:
             "nadrs": n_adrs,
             "stale_count": 0,
         }
-        msg = f"[Fairlead] memoria al día ({n_inputs} inputs · {n_adrs} ADRs)"
+        msg = f"[Braid] memoria al día ({n_inputs} inputs · {n_adrs} ADRs)"
         return _emit(report, as_json, msg)
 
     n_stale = len(stale)
@@ -133,7 +138,7 @@ def run_session_start(as_json: bool = False) -> int:
         "nadrs": n_adrs,
         "stale_count": n_stale,
     }
-    msg = f"[Fairlead] memoria stale ({n_stale} {plural} · ejecuta 'fairlead sync')"
+    msg = f"[Braid] memoria stale ({n_stale} {plural} · ejecuta 'braid sync')"
     return _emit(report, as_json, msg)
 
 
@@ -164,7 +169,7 @@ def _hook_entry() -> dict:
     """Estructura del hook según docs oficiales Claude Code (code.claude.com/docs/en/hooks).
 
     SessionStart admite `matcher` (startup|resume|clear|compact) — usamos los cuatro
-    para que Claude reciba el estado de Fairlead tras cualquier transición.
+    para que Claude reciba el estado de Braid tras cualquier transición.
     `timeout` en segundos: el comando p50 = 250 ms, ponemos 5 s por seguridad
     (default 600 s sería absurdo bloquear la sesión).
     `statusMessage` se muestra al usuario durante la ejecución del hook.
@@ -176,24 +181,30 @@ def _hook_entry() -> dict:
                 "type": "command",
                 "command": HOOK_COMMAND,
                 "timeout": 5,
-                "statusMessage": "Cargando memoria Fairlead...",
+                "statusMessage": "Cargando memoria Braid...",
             }
         ],
     }
 
 
-def _has_fairlead_hook(events: list[dict]) -> bool:
+def _has_braid_hook(events: list[dict]) -> bool:
     for evt in events:
         for hook in evt.get("hooks", []) or []:
-            if HOOK_MARKER in (hook.get("command") or ""):
+            command = hook.get("command") or ""
+            if HOOK_MARKER in command or any(marker in command for marker in LEGACY_HOOK_MARKERS):
                 return True
     return False
 
 
-def _strip_fairlead_hook(events: list[dict]) -> list[dict]:
+def _strip_braid_hook(events: list[dict]) -> list[dict]:
     cleaned = []
     for evt in events:
-        new_hooks = [h for h in (evt.get("hooks") or []) if HOOK_MARKER not in (h.get("command") or "")]
+        new_hooks = []
+        for hook in evt.get("hooks") or []:
+            command = hook.get("command") or ""
+            if HOOK_MARKER in command or any(marker in command for marker in LEGACY_HOOK_MARKERS):
+                continue
+            new_hooks.append(hook)
         if new_hooks:
             cleaned.append({**evt, "hooks": new_hooks})
         # si el evento queda sin hooks, lo descartamos
@@ -204,7 +215,7 @@ def run_init(remove: bool = False) -> int:
     """Cablea (o elimina) el hook SessionStart + MCP server en <git_root>/.claude/settings.json."""
     root = find_git_root()
     if root is None:
-        sys.stderr.write("[fairlead claude-init] no estás dentro de un repo git\n")
+        sys.stderr.write("[braid claude-init] no estás dentro de un repo git\n")
         return 1
 
     target = _settings_path(root)
@@ -214,23 +225,24 @@ def run_init(remove: bool = False) -> int:
 
     if remove:
         # Remove hook
-        if not _has_fairlead_hook(session_start):
-            print(f"[fairlead claude-init] sin hook que retirar en {target}")
+        if not _has_braid_hook(session_start):
+            print(f"[braid claude-init] sin hook que retirar en {target}")
         else:
-            hooks["SessionStart"] = _strip_fairlead_hook(session_start)
+            hooks["SessionStart"] = _strip_braid_hook(session_start)
             if not hooks["SessionStart"]:
                 del hooks["SessionStart"]
             if not hooks:
                 del settings["hooks"]
-            print(f"[fairlead claude-init] hook retirado de {target}")
+            print(f"[braid claude-init] hook retirado de {target}")
 
         # Remove MCP server
         mcp_servers = settings.get("mcpServers", {})
-        if "fairlead" in mcp_servers:
-            del mcp_servers["fairlead"]
-            if not mcp_servers:
-                del settings["mcpServers"]
-            print(f"[fairlead claude-init] MCP server 'fairlead' retirado")
+        removed_servers = [name for name in ("braid", "fairlead", "wikiforge") if name in mcp_servers]
+        for name in removed_servers:
+            del mcp_servers[name]
+            print(f"[braid claude-init] MCP server '{name}' retirado")
+        if not mcp_servers and "mcpServers" in settings:
+            del settings["mcpServers"]
 
         if settings:
             _save_settings(target, settings)
@@ -239,23 +251,27 @@ def run_init(remove: bool = False) -> int:
         return 0
 
     # Add hook
-    if _has_fairlead_hook(session_start):
-        print(f"[fairlead claude-init] hook ya presente en {target} — sin cambios")
+    if _has_braid_hook(session_start):
+        print(f"[braid claude-init] hook ya presente en {target} — sin cambios")
     else:
         session_start.append(_hook_entry())
-        print(f"[fairlead claude-init] hook SessionStart añadido en {target}")
+        print(f"[braid claude-init] hook SessionStart añadido en {target}")
         print("  comando: " + HOOK_COMMAND)
 
     # Add MCP server
     mcp_servers = settings.setdefault("mcpServers", {})
-    if "fairlead" not in mcp_servers:
-        mcp_servers["fairlead"] = {
-            "command": "fairlead",
+    for legacy_name in ("fairlead", "wikiforge"):
+        if legacy_name in mcp_servers:
+            del mcp_servers[legacy_name]
+            print(f"[braid claude-init] MCP server legacy '{legacy_name}' retirado")
+    if "braid" not in mcp_servers:
+        mcp_servers["braid"] = {
+            "command": "braid",
             "args": ["mcp-serve"],
         }
-        print("[fairlead claude-init] MCP server 'fairlead' añadido")
+        print("[braid claude-init] MCP server 'braid' añadido")
     else:
-        print("[fairlead claude-init] MCP server 'fairlead' ya presente — sin cambios")
+        print("[braid claude-init] MCP server 'braid' ya presente — sin cambios")
 
     _save_settings(target, settings)
     return 0

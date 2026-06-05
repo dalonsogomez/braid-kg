@@ -1,17 +1,17 @@
-"""Tests for fairlead commands.promote (wikiforge.commands.promote) — ADR numbering, slugify, demote."""
+"""Tests for Braid commands.promote (braid.commands.promote) — ADR numbering, slugify, demote."""
 from __future__ import annotations
 
 import pytest
 from pathlib import Path
 
-from wikiforge.commands.promote import (
+from braid.commands.promote import (
     _slugify,
     _next_adr_number,
     run_promote_decision,
     run_demote,
     run_promote_to_global,
 )
-from wikiforge.paths import ProjectContext
+from braid.paths import ProjectContext
 
 
 class TestSlugify:
@@ -34,17 +34,17 @@ class TestSlugify:
 
 class TestNextAdrNumber:
     def test_first_adr(self, tmp_git_root):
-        decisions_dir = tmp_git_root / ".memory" / "decisions"
+        decisions_dir = tmp_git_root / ".braid" / "memory" / "decisions"
         assert _next_adr_number(decisions_dir) == "0001"
 
     def test_increments(self, tmp_git_root):
-        decisions_dir = tmp_git_root / ".memory" / "decisions"
+        decisions_dir = tmp_git_root / ".braid" / "memory" / "decisions"
         (decisions_dir / "0001-first.md").write_text("# ADR 1")
         (decisions_dir / "0002-second.md").write_text("# ADR 2")
         assert _next_adr_number(decisions_dir) == "0003"
 
     def test_gap_in_numbering(self, tmp_git_root):
-        decisions_dir = tmp_git_root / ".memory" / "decisions"
+        decisions_dir = tmp_git_root / ".braid" / "memory" / "decisions"
         (decisions_dir / "0001-first.md").write_text("# ADR 1")
         (decisions_dir / "0005-fifth.md").write_text("# ADR 5")
         # Should use max + 1, not fill the gap
@@ -60,13 +60,13 @@ class TestRunPromoteDecision:
             kgconfig={},
         )
         # Patch resolve_context in the promote module's namespace
-        import wikiforge.commands.promote as promote_mod
+        import braid.commands.promote as promote_mod
         monkeypatch.setattr(promote_mod, "resolve_context", lambda: ctx)
 
         result = run_promote_decision("Use DuckDB for catalog storage", title="DuckDB Catalog")
         assert result == 0
 
-        decisions_dir = tmp_git_root / ".memory" / "decisions"
+        decisions_dir = tmp_git_root / ".braid" / "memory" / "decisions"
         files = list(decisions_dir.glob("*.md"))
         assert len(files) >= 1
         content = files[0].read_text()
@@ -80,9 +80,9 @@ class TestRunPromoteDecision:
             has_kg=False,
             kgconfig={},
         )
-        import wikiforge.commands.promote as promote_mod
+        import braid.commands.promote as promote_mod
         monkeypatch.setattr(promote_mod, "resolve_context", lambda: ctx)
-        # No .memory/decisions dir
+        # No .braid/memory/decisions dir
         result = run_promote_decision("test")
         assert result == 1
 
@@ -95,10 +95,10 @@ class TestRunDemote:
             has_kg=True,
             kgconfig={},
         )
-        import wikiforge.commands.promote as promote_mod
+        import braid.commands.promote as promote_mod
         monkeypatch.setattr(promote_mod, "resolve_context", lambda: ctx)
 
-        decisions_dir = tmp_git_root / ".memory" / "decisions"
+        decisions_dir = tmp_git_root / ".braid" / "memory" / "decisions"
         test_adr = decisions_dir / "0042-demote-test.md"
         test_adr.write_text("# ADR 42 — Demote Test")
 
@@ -115,7 +115,7 @@ class TestRunDemote:
             has_kg=True,
             kgconfig={},
         )
-        import wikiforge.commands.promote as promote_mod
+        import braid.commands.promote as promote_mod
         monkeypatch.setattr(promote_mod, "resolve_context", lambda: ctx)
         result = run_demote("9999")
         assert result == 1

@@ -1,4 +1,4 @@
-"""`fairlead status`: resumen del proyecto activo + perfil global + DuckLake."""
+"""`braid status`: resumen del proyecto activo + perfil global + DuckLake."""
 from __future__ import annotations
 
 from ..paths import GLOBAL_DATASET_ID, PROFILE_DIR, resolve_context
@@ -7,11 +7,11 @@ from ..paths import GLOBAL_DATASET_ID, PROFILE_DIR, resolve_context
 def _ducklake_status() -> dict | None:
     """Get DuckLake catalog summary if available."""
     try:
-        from ..ducklake import WikiForgeCatalog
+        from ..ducklake import BraidCatalog
     except ImportError:
         return None
     try:
-        with WikiForgeCatalog() as cat:
+        with BraidCatalog() as cat:
             return cat.get_catalog_summary()
     except Exception:
         return None
@@ -21,8 +21,11 @@ def run() -> int:
     ctx = resolve_context()
     print(f"Proyecto activo: {ctx.dataset_id}")
     print(f"  raíz:     {ctx.root}")
-    print(f"  .kg/:     {'sí' if ctx.has_kg else 'no'}")
-    print(f"  .kgconfig:{'sí' if (ctx.root / '.kgconfig').is_file() else 'no'}")
+    print(f"  .braid/:  {'sí' if ctx.braid_dir.is_dir() else 'no'}")
+    print(f"  kg/:      {'sí' if ctx.has_kg else 'no'}")
+    print(f"  config:   {'sí' if ctx.has_config else 'no'}")
+    if ctx.legacy_layout:
+        print("  legacy:   sí (lectura de migración)")
     decisions = ctx.memory_dir / "decisions"
     n_decisions = len(list(decisions.glob("[0-9]*-*.md"))) if decisions.is_dir() else 0
     print(f"  ADRs:     {n_decisions}")

@@ -1,4 +1,4 @@
-"""`fairlead ask`: consultar el KG/RAG del proyecto activo (o el global con --global).
+"""`braid ask`: consultar el KG/RAG del proyecto activo (o el global con --global).
 
 Combina resultados de Cognee (vector search) y DuckLake FTS (BM25) para
 dar respuestas más ricas. Si Cognee no está disponible, DuckLake FTS
@@ -20,13 +20,13 @@ def _short(text: str, n: int = 280) -> str:
 def _ducklake_fts_search(query: str, project_slug: str, top_k: int = 5) -> list[dict[str, Any]]:
     """Search DuckLake FTS indexes as complement/fallback to Cognee."""
     try:
-        from ..ducklake import WikiForgeCatalog
+        from ..ducklake import BraidCatalog
     except ImportError:
         return []
 
     results: list[dict[str, Any]] = []
     try:
-        with WikiForgeCatalog() as cat:
+        with BraidCatalog() as cat:
             if cat.fts_con is None:
                 return []
             # Search across all FTS indexes
@@ -59,13 +59,13 @@ def _ducklake_fts_search(query: str, project_slug: str, top_k: int = 5) -> list[
 def _ducklake_memory_search(query: str, project_slug: str, top_k: int = 5) -> list[dict[str, Any]]:
     """Search DuckLake structured memory (project + global levels)."""
     try:
-        from ..ducklake import WikiForgeCatalog
+        from ..ducklake import BraidCatalog
     except ImportError:
         return []
 
     results: list[dict[str, Any]] = []
     try:
-        with WikiForgeCatalog() as cat:
+        with BraidCatalog() as cat:
             # Project memory
             proj = cat.search_project_memory(query, project_slug=project_slug)
             for r in proj:
@@ -91,12 +91,12 @@ def _ducklake_memory_search(query: str, project_slug: str, top_k: int = 5) -> li
 def _ducklake_hybrid_search(query: str, project_slug: str, top_k: int = 5) -> dict[str, Any]:
     """Run the DuckLake hybrid local/global retrieval pipeline."""
     try:
-        from ..ducklake import WikiForgeCatalog
+        from ..ducklake import BraidCatalog
     except ImportError:
         return {}
 
     try:
-        with WikiForgeCatalog() as cat:
+        with BraidCatalog() as cat:
             return cat.hybrid_search(query, project_slug=project_slug, top_k=top_k).as_dict()
     except Exception:
         return {}
@@ -106,7 +106,7 @@ def run(query: str, search_type: str = "CHUNKS", top_k: int = 5, use_global: boo
     ctx = resolve_context()
     dataset = GLOBAL_DATASET_ID if use_global else ctx.dataset_id
     scope = "global profile" if use_global else f"project '{ctx.dataset_id}' ({ctx.root})"
-    print(f"[fairlead ask] {scope} | type={search_type} top_k={top_k}")
+    print(f"[braid ask] {scope} | type={search_type} top_k={top_k}")
     print(f"Q: {query}\n")
 
     # 1. Cognee vector search (primary)
@@ -114,7 +114,7 @@ def run(query: str, search_type: str = "CHUNKS", top_k: int = 5, use_global: boo
     try:
         cognee_results = run_search(query, dataset, search_type=search_type, top_k=top_k)
     except Exception as e:
-        print(f"[fairlead ask] Cognee no disponible: {type(e).__name__}: {e}", file=sys.stderr)
+        print(f"[braid ask] Cognee no disponible: {type(e).__name__}: {e}", file=sys.stderr)
 
     # 2. DuckLake hybrid retrieval (BM25 + graph + optional LanceDB + Global RAG batches)
     hybrid_results = _ducklake_hybrid_search(query, ctx.dataset_id, top_k=top_k)
@@ -166,7 +166,7 @@ def run(query: str, search_type: str = "CHUNKS", top_k: int = 5, use_global: boo
         print()
 
     if not has_any:
-        print("[fairlead ask] no results — quizá necesitas `fairlead index` o cambiar --type.")
+        print("[braid ask] no results — quizá necesitas `braid index` o cambiar --type.")
         return 0
 
     return 0
