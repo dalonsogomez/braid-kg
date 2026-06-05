@@ -1,4 +1,4 @@
-"""`wikiforge claude-session-start` y `wikiforge claude-init`.
+"""`fairlead claude-session-start` y `fairlead claude-init`.
 
 Pieza ADR 0009. El primero reporta estado de memoria del repo activo en <500 ms
 sin tocar el LLM ni cognee. El segundo cablea el hook SessionStart en
@@ -29,8 +29,8 @@ EXCLUDE_PARTS = {"_backup", "output", "__pycache__", ".venv", ".git", "build", "
 
 INDEX_STATE_FILENAME = "last_index.json"
 
-HOOK_COMMAND = "wikiforge claude-session-start"
-HOOK_MARKER = "wikiforge claude-session-start"  # substring usado para localizar la entrada al --remove
+HOOK_COMMAND = "fairlead claude-session-start"
+HOOK_MARKER = "fairlead claude-session-start"  # substring usado para localizar la entrada al --remove
 
 
 def _is_excluded(p: Path) -> bool:
@@ -98,7 +98,7 @@ def run_session_start(as_json: bool = False) -> int:
     kg_dir = root / ".kg"
     if not kg_dir.is_dir():
         report = {"status": "uninitialized", "root": str(root)}
-        msg = "[WikiForge] repo no inicializado · ejecuta 'wikiforge init && wikiforge index'"
+        msg = "[Fairlead] repo no inicializado · ejecuta 'fairlead init && fairlead index'"
         return _emit(report, as_json, msg)
 
     state = _load_index_state(kg_dir)
@@ -106,7 +106,7 @@ def run_session_start(as_json: bool = False) -> int:
 
     if state is None or "timestamp" not in state:
         report = {"status": "indexed_pending", "root": str(root), "nadrs": n_adrs}
-        msg = "[WikiForge] repo inicializado pero no indexado · ejecuta 'wikiforge index'"
+        msg = "[Fairlead] repo inicializado pero no indexado · ejecuta 'fairlead index'"
         return _emit(report, as_json, msg)
 
     last_ts = float(state.get("timestamp_unix") or 0)
@@ -121,7 +121,7 @@ def run_session_start(as_json: bool = False) -> int:
             "nadrs": n_adrs,
             "stale_count": 0,
         }
-        msg = f"[WikiForge] memoria al día ({n_inputs} inputs · {n_adrs} ADRs)"
+        msg = f"[Fairlead] memoria al día ({n_inputs} inputs · {n_adrs} ADRs)"
         return _emit(report, as_json, msg)
 
     n_stale = len(stale)
@@ -133,7 +133,7 @@ def run_session_start(as_json: bool = False) -> int:
         "nadrs": n_adrs,
         "stale_count": n_stale,
     }
-    msg = f"[WikiForge] memoria stale ({n_stale} {plural} · ejecuta 'wikiforge sync')"
+    msg = f"[Fairlead] memoria stale ({n_stale} {plural} · ejecuta 'fairlead sync')"
     return _emit(report, as_json, msg)
 
 
@@ -164,7 +164,7 @@ def _hook_entry() -> dict:
     """Estructura del hook según docs oficiales Claude Code (code.claude.com/docs/en/hooks).
 
     SessionStart admite `matcher` (startup|resume|clear|compact) — usamos los cuatro
-    para que Claude reciba el estado de WikiForge tras cualquier transición.
+    para que Claude reciba el estado de Fairlead tras cualquier transición.
     `timeout` en segundos: el comando p50 = 250 ms, ponemos 5 s por seguridad
     (default 600 s sería absurdo bloquear la sesión).
     `statusMessage` se muestra al usuario durante la ejecución del hook.
@@ -176,13 +176,13 @@ def _hook_entry() -> dict:
                 "type": "command",
                 "command": HOOK_COMMAND,
                 "timeout": 5,
-                "statusMessage": "Cargando memoria WikiForge...",
+                "statusMessage": "Cargando memoria Fairlead...",
             }
         ],
     }
 
 
-def _has_wikiforge_hook(events: list[dict]) -> bool:
+def _has_fairlead_hook(events: list[dict]) -> bool:
     for evt in events:
         for hook in evt.get("hooks", []) or []:
             if HOOK_MARKER in (hook.get("command") or ""):
@@ -190,7 +190,7 @@ def _has_wikiforge_hook(events: list[dict]) -> bool:
     return False
 
 
-def _strip_wikiforge_hook(events: list[dict]) -> list[dict]:
+def _strip_fairlead_hook(events: list[dict]) -> list[dict]:
     cleaned = []
     for evt in events:
         new_hooks = [h for h in (evt.get("hooks") or []) if HOOK_MARKER not in (h.get("command") or "")]
@@ -201,10 +201,10 @@ def _strip_wikiforge_hook(events: list[dict]) -> list[dict]:
 
 
 def run_init(remove: bool = False) -> int:
-    """Cablea (o elimina) el hook SessionStart en <git_root>/.claude/settings.json."""
+    """Cablea (o elimina) el hook SessionStart + MCP server en <git_root>/.claude/settings.json."""
     root = find_git_root()
     if root is None:
-        sys.stderr.write("[wikiforge claude-init] no estás dentro de un repo git\n")
+        sys.stderr.write("[fairlead claude-init] no estás dentro de un repo git\n")
         return 1
 
     target = _settings_path(root)
@@ -213,27 +213,49 @@ def run_init(remove: bool = False) -> int:
     session_start = hooks.setdefault("SessionStart", [])
 
     if remove:
-        if not _has_wikiforge_hook(session_start):
-            print(f"[wikiforge claude-init] sin hook que retirar en {target}")
-            return 0
-        hooks["SessionStart"] = _strip_wikiforge_hook(session_start)
-        if not hooks["SessionStart"]:
-            del hooks["SessionStart"]
-        if not hooks:
-            del settings["hooks"]
+        # Remove hook
+        if not _has_fairlead_hook(session_start):
+            print(f"[fairlead claude-init] sin hook que retirar en {target}")
+        else:
+            hooks["SessionStart"] = _strip_fairlead_hook(session_start)
+            if not hooks["SessionStart"]:
+                del hooks["SessionStart"]
+            if not hooks:
+                del settings["hooks"]
+            print(f"[fairlead claude-init] hook retirado de {target}")
+
+        # Remove MCP server
+        mcp_servers = settings.get("mcpServers", {})
+        if "fairlead" in mcp_servers:
+            del mcp_servers["fairlead"]
+            if not mcp_servers:
+                del settings["mcpServers"]
+            print(f"[fairlead claude-init] MCP server 'fairlead' retirado")
+
         if settings:
             _save_settings(target, settings)
         elif target.is_file():
             target.unlink()
-        print(f"[wikiforge claude-init] hook retirado de {target}")
         return 0
 
-    if _has_wikiforge_hook(session_start):
-        print(f"[wikiforge claude-init] hook ya presente en {target} — sin cambios")
-        return 0
+    # Add hook
+    if _has_fairlead_hook(session_start):
+        print(f"[fairlead claude-init] hook ya presente en {target} — sin cambios")
+    else:
+        session_start.append(_hook_entry())
+        print(f"[fairlead claude-init] hook SessionStart añadido en {target}")
+        print("  comando: " + HOOK_COMMAND)
 
-    session_start.append(_hook_entry())
+    # Add MCP server
+    mcp_servers = settings.setdefault("mcpServers", {})
+    if "fairlead" not in mcp_servers:
+        mcp_servers["fairlead"] = {
+            "command": "fairlead",
+            "args": ["mcp-serve"],
+        }
+        print("[fairlead claude-init] MCP server 'fairlead' añadido")
+    else:
+        print("[fairlead claude-init] MCP server 'fairlead' ya presente — sin cambios")
+
     _save_settings(target, settings)
-    print(f"[wikiforge claude-init] hook SessionStart añadido en {target}")
-    print("  comando: " + HOOK_COMMAND)
     return 0

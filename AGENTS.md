@@ -1,6 +1,6 @@
-# WikiForge — Project Instructions
+# Fairlead — Project Instructions
 
-> **Cómo usar este documento.** Este es el archivo canónico de instrucciones del proyecto WikiForge. Vive simultáneamente como (i) `AGENTS.md` en la raíz del repositorio, (ii) Project Instructions en Claude.ai, y (iii) referencia técnica de las decisiones tomadas. Todo lo que contradiga este documento es obsoleto. Lo que no esté aquí, no es decisión del proyecto.
+> **Cómo usar este documento.** Este es el archivo canónico de instrucciones del proyecto Fairlead. Vive simultáneamente como (i) `AGENTS.md` en la raíz del repositorio, (ii) Project Instructions en Claude.ai, y (iii) referencia técnica de las decisiones tomadas. Todo lo que contradiga este documento es obsoleto. Lo que no esté aquí, no es decisión del proyecto.
 >
 > Las modificaciones a este archivo se hacen vía pull request con un ADR asociado en `.memory/decisions/`.
 
@@ -8,7 +8,7 @@
 
 ## 1. Misión y prioridades
 
-WikiForge es un sistema **MCP-first** que da a las herramientas de desarrollo asistido (Claude Code, Codex CLI, Cursor, Cline, Aider, Goose) **memoria persistente y contexto estructurado por proyecto**, de forma que respondan con grounding real al código, las decisiones y la documentación del repositorio activo en lugar de inventar.
+Fairlead es un sistema **MCP-first** que da a las herramientas de desarrollo asistido (Claude Code, Codex CLI, Cursor, Cline, Aider, Goose) **memoria persistente y contexto estructurado por proyecto**, de forma que respondan con grounding real al código, las decisiones y la documentación del repositorio activo en lugar de inventar.
 
 Las prioridades son ordenadas y no se negocian:
 
@@ -31,7 +31,7 @@ Estas siete decisiones están firmes. El resto se deriva de ellas.
 
 1. **MCP-first como protocolo único de consumo.** Todo lo que un IDE necesita se expone como herramienta MCP. No hay APIs custom por IDE, no hay plugins específicos. Añadir un editor compatible MCP es una entrada en su config; nada más.
 2. **Engine preferente, no dogma.** Cognee es el engine elegido por su MCP server oficial maduro y su pipeline ECL declarativo, pero la arquitectura está diseñada para que pueda sustituirse por LlamaIndex PropertyGraphIndex (o una implementación propia) **sin rediseñar nada por encima**. Cognee acelera; no es la base de la arquitectura.
-3. **Contexto resuelto por directorio.** El proyecto activo siempre tiene prioridad sobre cualquier contexto global. Resolución estricta: `cwd → git root → .kgconfig → ~/.wikiforge/profile/` como fallback final. Nunca se mezclan niveles por defecto.
+3. **Contexto resuelto por directorio.** El proyecto activo siempre tiene prioridad sobre cualquier contexto global. Resolución estricta: `cwd → git root → .kgconfig → ~/.fairlead/profile/` como fallback final. Nunca se mezclan niveles por defecto.
 4. **Memoria explícita en tres niveles.** Sesión (volátil), proyecto (persistente vinculada a la raíz Git), global personal (fallback cross-proyectos). Cada nivel tiene un dataset distinto y un store separado.
 5. **Promoción exclusivamente manual.** No existe auto-promote en ninguna dirección. La memoria solo asciende de nivel cuando el usuario lo decide con un comando explícito. Esta es **la regla de oro**: cualquier auto-promotion futura contamina los niveles superiores y degrada la calidad.
 6. **AGENTS.md como contrato único.** Un solo archivo gobierna las instrucciones para todos los IDEs. `CLAUDE.md`, `.github/copilot-instructions.md` y `.cursor/rules/main.mdc` son symlinks al `AGENTS.md`. Cuando Claude Code soporte AGENTS.md de forma nativa (issue Anthropic #6235), se eliminará el symlink correspondiente.
@@ -79,14 +79,14 @@ Estas siete decisiones están firmes. El resto se deriva de ellas.
 
 **Nivel 1 — Persistente de proyecto.** Vida: hasta `git rm`. Contiene convenciones del repo, ADRs, glosario de dominio, resúmenes estructurales, decisiones técnicas. Vinculada a la raíz Git del proyecto. Cognee `dataset_id = <project_slug>`. Vive en `.kg/` (grafo + metadata), `.rag/` (vectores), y `.memory/*.md` (capa humana editable y auditable).
 
-**Nivel 2 — Persistente personal/global.** Vida: cross-proyectos. Contiene preferencias estables del usuario que aplican a cualquier repositorio: estilo de código, librerías preferidas, idioma de comentarios, patrones que rechaza. Cognee `dataset_id = "_global_profile"`. Vive en `~/.wikiforge/profile/`. **Solo se consulta como fallback** cuando la búsqueda local devuelve score por debajo del umbral.
+**Nivel 2 — Persistente personal/global.** Vida: cross-proyectos. Contiene preferencias estables del usuario que aplican a cualquier repositorio: estilo de código, librerías preferidas, idioma de comentarios, patrones que rechaza. Cognee `dataset_id = "_global_profile"`. Vive en `~/.fairlead/profile/`. **Solo se consulta como fallback** cuando la búsqueda local devuelve score por debajo del umbral.
 
 ### 4.2. Reglas de promoción (no negociables)
 
 1. **No existe promoción automática en ninguna dirección.** Bajo ninguna circunstancia.
-2. La promoción sesión → proyecto requiere `wikiforge promote-decision "<texto>"`.
-3. La promoción proyecto → global requiere `wikiforge promote-to-global "<texto>"`.
-4. El descenso de nivel se hace con `wikiforge demote --id <decision_id>`.
+2. La promoción sesión → proyecto requiere `fairlead promote-decision "<texto>"`.
+3. La promoción proyecto → global requiere `fairlead promote-to-global "<texto>"`.
+4. El descenso de nivel se hace con `fairlead demote --id <decision_id>`.
 5. Una decisión solo se promueve si cumple alguno de estos criterios:
    - Aparece repetidamente en varias sesiones del mismo proyecto.
    - Afecta a varios módulos o archivos.
@@ -101,7 +101,7 @@ Cada llamada del agente a `mcp__cognee__search` (o equivalente) pasa por este al
 1. **`cwd`** → buscar `.kg/` ascendiendo hasta la primera raíz Git.
 2. **Raíz Git** → si no se halló `.kg/` heredado, usar la raíz Git como ámbito.
 3. **`.kgconfig`** → si existe, su `dataset_id` y `priority` ganan sobre lo deducido.
-4. **`~/.wikiforge/profile/`** → solo se consulta si los pasos 1-3 devuelven un top-k con score por debajo del umbral configurado (default `0.55`).
+4. **`~/.fairlead/profile/`** → solo se consulta si los pasos 1-3 devuelven un top-k con score por debajo del umbral configurado (default `0.55`).
 
 Esto se implementa en un wrapper MCP custom de ~150 líneas que intercepta la llamada a Cognee y decide qué `dataset_id` consultar. Es el cerebro del sistema; sin él no hay tres niveles, hay un solo cajón global contaminado.
 
@@ -139,13 +139,13 @@ Esto es **suficiente** para responder con calidad: "qué hace esta función", "d
 ## 6. Estructura de directorios
 
 ```
-~/.wikiforge/                        # NIVEL 2 — global personal
+~/.fairlead/                        # NIVEL 2 — global personal
   profile/
     AGENTS.md                        # preferencias estables (fuente humana)
     preferences.json                 # mismas preferencias estructuradas
     cognee_data/                     # dataset_id = "_global_profile"
   cache/
-  bin/                               # CLI: wikiforge
+  bin/                               # CLI: fairlead
 
 mi-proyecto/                         # NIVEL 1 — proyecto
   .git/
@@ -171,23 +171,23 @@ mi-proyecto/                         # NIVEL 1 — proyecto
 
 ---
 
-## 7. CLI `wikiforge` — comandos canónicos
+## 7. CLI `fairlead` — comandos canónicos
 
 El CLI es deliberadamente pequeño. Hace pocas cosas y las hace bien. Cualquier comando adicional requiere un ADR.
 
 | Comando | Acción |
 |---|---|
-| `wikiforge init` | Crea `.kg/`, `.rag/`, `.memory/`, `.kgconfig`, `AGENTS.md` y los symlinks. Idempotente. |
-| `wikiforge index` | Ejecuta la ingesta de código (tree-sitter vía Cognee `codify`) y de docs (`cognify`). Construye vectores y actualiza el grafo. Incremental por defecto. |
-| `wikiforge ask "<query>"` | Resuelve proyecto por `cwd` y consulta el índice + grafo. Devuelve `project context bundle` (chunks + nodos + caminos + señales). Útil sobre todo para depurar el sistema; los IDEs lo consumen vía MCP, no este CLI. |
-| `wikiforge promote-decision "<texto>"` | Promueve sesión → proyecto. Genera ADR en `.memory/decisions/NNNN-<slug>.md`. |
-| `wikiforge promote-to-global "<texto>"` | Promueve proyecto → global. Solo si el texto aplica cross-proyectos. |
-| `wikiforge demote --id <decision_id>` | Revierte una promoción indebida. |
-| `wikiforge sync` | Reescanea `.kg/` y reconcilia con el sistema de archivos (útil tras git pull). Incremental real por `mtime` desde ADR 0009: at-rest exit 0 sin invocar el LLM. |
-| `wikiforge eval` | (ADR 0010) Ejecuta `.memory/eval/questions.json` (10-20 preguntas con ground truth). Scoring por substring + recall@1 + recall@K. Run JSON guardado en `.memory/eval/runs/<ISO>.json`. Flags: `--questions`, `--top-k`, `--no-save`, `--per-question-timeout`. Herramienta canónica para validar regresiones y para activar/desactivar síntomas sec. 11.4 / 11.10. |
-| `wikiforge wiki build` | (Mes 2+) Genera Markdown desde Cognee y compila Astro Starlight. |
-| `wikiforge claude-session-start` | (ADR 0009) Subcomando de hook. Lee filesystem, reporta estado de memoria del repo activo en una línea (al día / stale / no inicializado / no-repo) en p50 ≈ 250 ms. **No llama al LLM ni crea `.kg/`.** Soporta `--json`. Su stdout entra en el contexto de Claude Code (sec. 4 schema oficial Anthropic). |
-| `wikiforge claude-init` | (ADR 0009) Cablea hook `SessionStart` (matchers `startup\|resume\|clear\|compact`, `timeout: 5s`, `statusMessage`) en `<git_root>/.claude/settings.json`. Idempotente; preserva otras claves (`permissions`, `env`, otros hooks). `--remove` lo desinstala. |
+| `fairlead init` | Crea `.kg/`, `.rag/`, `.memory/`, `.kgconfig`, `AGENTS.md` y los symlinks. Idempotente. |
+| `fairlead index` | Ejecuta la ingesta de código (tree-sitter vía Cognee `codify`) y de docs (`cognify`). Construye vectores y actualiza el grafo. Incremental por defecto. |
+| `fairlead ask "<query>"` | Resuelve proyecto por `cwd` y consulta el índice + grafo. Devuelve `project context bundle` (chunks + nodos + caminos + señales). Útil sobre todo para depurar el sistema; los IDEs lo consumen vía MCP, no este CLI. |
+| `fairlead promote-decision "<texto>"` | Promueve sesión → proyecto. Genera ADR en `.memory/decisions/NNNN-<slug>.md`. |
+| `fairlead promote-to-global "<texto>"` | Promueve proyecto → global. Solo si el texto aplica cross-proyectos. |
+| `fairlead demote --id <decision_id>` | Revierte una promoción indebida. |
+| `fairlead sync` | Reescanea `.kg/` y reconcilia con el sistema de archivos (útil tras git pull). Incremental real por `mtime` desde ADR 0009: at-rest exit 0 sin invocar el LLM. |
+| `fairlead eval` | (ADR 0010) Ejecuta `.memory/eval/questions.json` (10-20 preguntas con ground truth). Scoring por substring + recall@1 + recall@K. Run JSON guardado en `.memory/eval/runs/<ISO>.json`. Flags: `--questions`, `--top-k`, `--no-save`, `--per-question-timeout`. Herramienta canónica para validar regresiones y para activar/desactivar síntomas sec. 11.4 / 11.10. |
+| `fairlead wiki build` | (Mes 2+) Genera Markdown desde Cognee y compila Astro Starlight. |
+| `fairlead claude-session-start` | (ADR 0009) Subcomando de hook. Lee filesystem, reporta estado de memoria del repo activo en una línea (al día / stale / no inicializado / no-repo) en p50 ≈ 250 ms. **No llama al LLM ni crea `.kg/`.** Soporta `--json`. Su stdout entra en el contexto de Claude Code (sec. 4 schema oficial Anthropic). |
+| `fairlead claude-init` | (ADR 0009) Cablea hook `SessionStart` (matchers `startup\|resume\|clear\|compact`, `timeout: 5s`, `statusMessage`) en `<git_root>/.claude/settings.json`. Idempotente; preserva otras claves (`permissions`, `env`, otros hooks). `--remove` lo desinstala. |
 
 ---
 
@@ -197,9 +197,9 @@ Las siguientes reglas se aplican a cualquier agente (Claude Code, Codex CLI, Cur
 
 ### 8.1. Antes de responder
 
-1. **Lee el banner `[WikiForge] …` del primer mensaje del sistema** si aparece (lo emite el hook `SessionStart` configurado por `wikiforge claude-init` — ADR 0009). Te dice si la memoria del repo está al día, stale, no indexada o no inicializada. Si dice "no inicializado" / "no indexado", **no consultes cognee**: pídele al usuario `wikiforge init && wikiforge index` antes de responder. Si dice "stale", avisa que las respuestas pueden estar desactualizadas y sugiere `wikiforge sync`.
-2. **Resuelve el contexto vía MCP `cognee`** (o el wrapper de WikiForge si está disponible) **antes** de responder a cualquier pregunta sobre código o decisiones del proyecto. No respondas de memoria sobre símbolos del repo: consulta primero.
-3. **Si el grafo no devuelve resultados con score suficiente**, dilo explícitamente. No inventes el comportamiento de funciones que no estén en el grafo. Pide al usuario que ejecute `wikiforge index` si el banner del paso 1 lo indicaba.
+1. **Lee el banner `[Fairlead] …` del primer mensaje del sistema** si aparece (lo emite el hook `SessionStart` configurado por `fairlead claude-init` — ADR 0009). Te dice si la memoria del repo está al día, stale, no indexada o no inicializada. Si dice "no inicializado" / "no indexado", **no consultes cognee**: pídele al usuario `fairlead init && fairlead index` antes de responder. Si dice "stale", avisa que las respuestas pueden estar desactualizadas y sugiere `fairlead sync`.
+2. **Resuelve el contexto vía MCP `cognee`** (o el wrapper de Fairlead si está disponible) **antes** de responder a cualquier pregunta sobre código o decisiones del proyecto. No respondas de memoria sobre símbolos del repo: consulta primero.
+3. **Si el grafo no devuelve resultados con score suficiente**, dilo explícitamente. No inventes el comportamiento de funciones que no estén en el grafo. Pide al usuario que ejecute `fairlead index` si el banner del paso 1 lo indicaba.
 4. **Cita la fuente** cuando uses información del grafo: ruta de archivo, número de línea aproximado, o ID del ADR (`.memory/decisions/NNNN-*.md`).
 5. **No mezcles contexto cross-proyectos.** Si la pregunta es del proyecto actual, no cites información del perfil global. Si necesitas el perfil global porque falta señal local, dilo: *"Sin información en el proyecto activo; según tu perfil global..."*
 
@@ -207,12 +207,12 @@ Las siguientes reglas se aplican a cualquier agente (Claude Code, Codex CLI, Cur
 
 1. **Local primero, cloud después.** Para chat diario, búsqueda en KG y generación de resúmenes, usa el modelo local Ollama. Para extracción inicial de KG en repos grandes, generación final de páginas de wiki, o tareas donde un error se propaga estructuralmente, usa Claude Sonnet 4.6 vía API.
 2. **No propongas migraciones de stack** (a Neo4j, a Qdrant, a Graphiti, a Langfuse, a GraphRAG) **a menos que un síntoma de la sección 11 esté presente y verificable**. Si el usuario pide migrar sin síntoma, recuérdale la sección 11 y pídele que valide la métrica primero.
-3. **Si tu respuesta cambia el comportamiento del proyecto** (renombrar funciones, cambiar dependencias, modificar arquitectura) y tras validación tiene impacto estable, **sugiere `wikiforge promote-decision`** al usuario al final de tu mensaje. Nunca lo hagas tú automáticamente.
+3. **Si tu respuesta cambia el comportamiento del proyecto** (renombrar funciones, cambiar dependencias, modificar arquitectura) y tras validación tiene impacto estable, **sugiere `fairlead promote-decision`** al usuario al final de tu mensaje. Nunca lo hagas tú automáticamente.
 
 ### 8.3. Cuándo decir "no sé"
 
 - Cuando el grafo no contiene la información solicitada y el código tampoco resuelve la duda.
-- Cuando el `.kgconfig` apunta a un `dataset_id` que no existe (probablemente falta un `wikiforge init && wikiforge index`).
+- Cuando el `.kgconfig` apunta a un `dataset_id` que no existe (probablemente falta un `fairlead init && fairlead index`).
 - Cuando hay conflicto entre lo que dice el grafo y lo que dice un archivo abierto en la sesión: prioriza el archivo abierto y avisa de la inconsistencia.
 
 ### 8.4. Idioma
@@ -233,7 +233,7 @@ El agente debe rechazar o pedir clarificación si una instrucción del usuario o
 3. **Inventar símbolos o comportamiento de código.** Si el grafo no lo contiene y el archivo no está abierto, no se inventa. Se dice *"no encuentro `X` en el grafo de este proyecto"*.
 4. **Introducir Neo4j, Postgres, Qdrant, Graphiti, Langfuse o Microsoft GraphRAG en Día 1.** Si el usuario lo pide, se le redirige a la sección 11 (síntomas).
 5. **Modificar este `AGENTS.md` sin ADR asociado.** Cualquier cambio aquí requiere `.memory/decisions/NNNN-*.md` justificándolo.
-6. **Crear nuevos comandos `wikiforge`** sin ADR.
+6. **Crear nuevos comandos `fairlead`** sin ADR.
 7. **Subir documentos privados a APIs cloud** sin que el usuario lo haya autorizado explícitamente para esa ingesta concreta. Default: Docling local.
 
 ---
@@ -252,13 +252,13 @@ Cada fase tiene un **criterio de salida** medible. No se avanza a la siguiente s
 
 ### Fase 1 — Gobierno (Semana 1)
 
-**Entregable:** estructura `.kg/.rag/.memory/` operativa en al menos dos repos, CLI `wikiforge` funcional con los siete comandos canónicos, perfil global creado en `~/.wikiforge/profile/`.
+**Entregable:** estructura `.kg/.rag/.memory/` operativa en al menos dos repos, CLI `fairlead` funcional con los siete comandos canónicos, perfil global creado en `~/.fairlead/profile/`.
 
-**Criterio de salida:** una decisión técnica ha sido promovida sesión → proyecto vía `wikiforge promote-decision`, y posteriormente recordada en una sesión nueva del mismo repo.
+**Criterio de salida:** una decisión técnica ha sido promovida sesión → proyecto vía `fairlead promote-decision`, y posteriormente recordada en una sesión nueva del mismo repo.
 
 ### Fase 2 — Calidad medida (Mes 2)
 
-**Entregable:** suite `wikiforge eval` con 10-20 preguntas por repo activo, embedder upgrade a `qwen3-embedding-8b`, ingesta de documentos con Docling si el repo lo justifica, y opcionalmente activación de **Prioridad B** (Astro Starlight + DeepWiki-Open).
+**Entregable:** suite `fairlead eval` con 10-20 preguntas por repo activo, embedder upgrade a `qwen3-embedding-8b`, ingesta de documentos con Docling si el repo lo justifica, y opcionalmente activación de **Prioridad B** (Astro Starlight + DeepWiki-Open).
 
 **Criterio de salida:** baseline de calidad medido y registrado; primer wiki personal navegable o público desplegado.
 
@@ -274,16 +274,16 @@ Las migraciones aquí listadas **solo se ejecutan si el síntoma se ha medido**,
 
 | ID | Síntoma observable | Migración asociada | Comando indicativo |
 |---|---|---|---|
-| 11.1 | Grafo > 100 000 nodos o `wikiforge ask` tarda > 2 s en p50 | networkx → ArcadeDB Embedded | `pip install arcadedb-embedded` + cambiar `GRAPH_DATABASE_PROVIDER` en `.env` |
-| 11.2 | Recall@10 < 0.7 medido en `wikiforge eval` con corpus heterogéneo grande | LanceDB → Qdrant local | `docker run -p 6333:6333 qdrant/qdrant` + `VECTOR_DB_PROVIDER=qdrant` |
+| 11.1 | Grafo > 100 000 nodos o `fairlead ask` tarda > 2 s en p50 | networkx → ArcadeDB Embedded | `pip install arcadedb-embedded` + cambiar `GRAPH_DATABASE_PROVIDER` en `.env` |
+| 11.2 | Recall@10 < 0.7 medido en `fairlead eval` con corpus heterogéneo grande | LanceDB → Qdrant local | `docker run -p 6333:6333 qdrant/qdrant` + `VECTOR_DB_PROVIDER=qdrant` |
 | 11.3 | bge-m3 falla repetidamente en preguntas multilingües código-español | bge-m3 → qwen3-embedding-8b | `huggingface-cli download mlx-community/Qwen3-Embedding-8B-MLX-4bit` |
-| 11.4 | Top-k contiene > 30 % de chunks irrelevantes en `wikiforge eval` | Añadir reranker | qwen3-reranker-4b o bge-reranker-v2-m3 vía sentence-transformers |
+| 11.4 | Top-k contiene > 30 % de chunks irrelevantes en `fairlead eval` | Añadir reranker | qwen3-reranker-4b o bge-reranker-v2-m3 vía sentence-transformers |
 | 11.5 | Aparecen contradicciones entre decisiones recientes y antiguas en el grafo | Añadir Graphiti MCP para memoria episódica bi-temporal | `git clone graphiti && docker-compose up -d` + `claude mcp add --transport sse graphiti http://localhost:8765/sse` |
 | 11.6 | > 5 flujos productivos coexistiendo y necesidad de comparar prompts/modelos entre versiones | Añadir Langfuse self-hosted | `docker run langfuse/langfuse` |
 | 11.7 | Corpus único > 500 páginas + necesidad real de queries globales sobre todo el corpus | Considerar Microsoft GraphRAG (no obligatorio) | Aislado en pipeline secundario; no toca el core |
 | 11.8 | Ollama Cloud caído > 1 vez por semana o latencia > 5s p50 | Reversión a `qwen3:30b` local — ADR 0005 sec. 4 | `ollama pull qwen3:30b` + cambiar `LLM_MODEL` en `.env` |
 | 11.9 | Coste mensual del plan Ollama Cloud sobre umbral acordado | Reversión a stack 100% local o cambio de plan | Idem 11.8 + revisar plan |
-| 11.10 | Calidad de extracción del LLM insuficiente medida en `wikiforge eval` (Fase 2) — < 60% en preguntas de grounding | Considerar Claude Sonnet 4.6 (ya en stack); requiere ADR autorizando ingesta cloud por repo | `cognee` con `LLM_PROVIDER=anthropic` + autorización privacidad por repo |
+| 11.10 | Calidad de extracción del LLM insuficiente medida en `fairlead eval` (Fase 2) — < 60% en preguntas de grounding | Considerar Claude Sonnet 4.6 (ya en stack); requiere ADR autorizando ingesta cloud por repo | `cognee` con `LLM_PROVIDER=anthropic` + autorización privacidad por repo |
 | 11.11 | `GGML_ASSERT([rsets->data count] == 0) failed` o "model runner has unexpectedly stopped" al cargar modelo Ollama local | Verificar que solo hay UN `ollama serve` en port 11434 — ADR 0006 sec. 2.4 | `lsof -nP -iTCP:11434 -sTCP:LISTEN`. Si hay dos (homebrew + Ollama.app): apagar Ollama.app O `brew services stop ollama`, dejar solo uno. |
 
 ---
@@ -293,14 +293,14 @@ Las migraciones aquí listadas **solo se ejecutan si el síntoma se ha medido**,
 Estas son hipótesis externas que pueden invalidar partes del documento. Se vigilan.
 
 - **AGENTS.md nativo en Claude Code (issue Anthropic #6235).** Si se cierra, el symlink `CLAUDE.md → AGENTS.md` se elimina y se actualiza este archivo con un ADR.
-- **Estado de Ollama y MLX.** El AGENTS.md original asumía Ollama 0.19 + MLX preview con `qwen3.5:35b-a3b`. ADR 0002 documenta el pivote a `qwen3:30b` (mejor aproximación disponible en Ollama hoy). Si la familia Qwen 3.5 llega a Ollama o si `qwen3:30b` rinde por debajo del umbral en `wikiforge eval`, ADR de actualización.
+- **Estado de Ollama y MLX.** El AGENTS.md original asumía Ollama 0.19 + MLX preview con `qwen3.5:35b-a3b`. ADR 0002 documenta el pivote a `qwen3:30b` (mejor aproximación disponible en Ollama hoy). Si la familia Qwen 3.5 llega a Ollama o si `qwen3:30b` rinde por debajo del umbral en `fairlead eval`, ADR de actualización.
 - **Cognee 1.0 sin networkx (descubrimiento del 2026-05-02).** El stack canónico original asumía networkx; ADR 0002 documenta el pivote a Kuzu como excepción. Si Cognee reintroduce networkx, ADR 0002 sec. 5.1 dispara reversión.
-- **Gemini API explorada como alternativa cloud (ADR 0001 — Superseded).** Las API keys siguen disponibles en `~/.config/wikiforge/secrets.env`; los modelos `gemini-3-flash-preview`, `gemini-3.1-pro-preview` y `gemini-embedding-001` quedaron verificados como disponibles en el proyecto Google AI Studio "WikiForge" (#846938751343). Si la calidad local resulta insuficiente, Gemini sigue siendo opción cloud disponible bajo nuevo ADR.
+- **Gemini API explorada como alternativa cloud (ADR 0001 — Superseded).** Las API keys siguen disponibles en `~/.config/fairlead/secrets.env`; los modelos `gemini-3-flash-preview`, `gemini-3.1-pro-preview` y `gemini-embedding-001` quedaron verificados como disponibles en el proyecto Google AI Studio "Fairlead" (#846938751343). Si la calidad local resulta insuficiente, Gemini sigue siendo opción cloud disponible bajo nuevo ADR.
 - **Kuzu archivado.** Si Cognee aún lo lista como graph provider en el código, **no lo selecciones**. Verifica en `cognee/cognee/infrastructure/databases/graph/` antes de cualquier configuración.
 - **Cognee `codify` para C#/Java/PHP** (issue #1502). Si tus repositorios son mayoritariamente C#/.NET, el grafo de código será más pobre que en Python hasta que el issue se cierre. Mitigación: `kg_extractors` custom basados en tree-sitter directo.
 - **DeepWiki-Open futuro.** El equipo está moviendo desarrollo a "AsyncReview". Si el proyecto se discontinúa, replantear capa B con generación propia desde Cognee + Astro Starlight.
-- **Costes cloud Claude Sonnet 4.6.** Vigilar gasto si se delega extracción inicial de repos grandes. Default: extracción local con Ollama; cloud solo cuando la calidad del grafo local sea insuficiente medida en `wikiforge eval`.
-- **Benchmarks de vendors (FalkorDB, ArcadeDB).** Publicados por los propios fabricantes. Cualquier decisión derivada de números crudos requiere validación cruzada con `wikiforge eval` propio antes de actuar.
+- **Costes cloud Claude Sonnet 4.6.** Vigilar gasto si se delega extracción inicial de repos grandes. Default: extracción local con Ollama; cloud solo cuando la calidad del grafo local sea insuficiente medida en `fairlead eval`.
+- **Benchmarks de vendors (FalkorDB, ArcadeDB).** Publicados por los propios fabricantes. Cualquier decisión derivada de números crudos requiere validación cruzada con `fairlead eval` propio antes de actuar.
 
 ---
 
@@ -371,7 +371,7 @@ COGNEE_SKIP_CONNECTION_TEST=true
 
 **Gestión de secretos (heredada del ADR 0001 sec. 2.4, sigue vigente):**
 
-- API keys de cualquier provider cloud (Gemini, MiniMax, Anthropic, etc.) viven **fuera del repo** en `~/.config/wikiforge/secrets.env` con permisos `600`.
+- API keys de cualquier provider cloud (Gemini, MiniMax, Anthropic, etc.) viven **fuera del repo** en `~/.config/fairlead/secrets.env` con permisos `600`.
 - Prohibido escribir cualquier API key real en `.env` del repo, en ADRs, en planes, en commits, o en cualquier archivo bajo control de versiones.
 
 ### 13.3. Plantilla `AGENTS.md` por proyecto (la específica de cada repo, no esta canónica)
@@ -395,11 +395,11 @@ COGNEE_SKIP_CONNECTION_TEST=true
 ## Memoria del proyecto
 - Contexto extendido en `.memory/MEMORY.md` y `.memory/decisions/`.
 - Knowledge graph disponible vía MCP server `cognee` con `dataset_id=<slug>`.
-- Para promover una decisión: `wikiforge promote-decision "..."`.
-- El sistema sigue las reglas del `AGENTS.md` canónico de WikiForge.
+- Para promover una decisión: `fairlead promote-decision "..."`.
+- El sistema sigue las reglas del `AGENTS.md` canónico de Fairlead.
 ```
 
-### 13.4. Plantilla `~/.wikiforge/profile/AGENTS.md`
+### 13.4. Plantilla `~/.fairlead/profile/AGENTS.md`
 
 ```markdown
 # Perfil global

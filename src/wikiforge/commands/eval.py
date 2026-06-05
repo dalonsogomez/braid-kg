@@ -1,4 +1,4 @@
-"""`wikiforge eval`: ejecuta la suite de preguntas declarada en `.memory/eval/questions.json`.
+"""`fairlead eval`: ejecuta la suite de preguntas declarada en `.memory/eval/questions.json`.
 
 ADR 0010. Scoring por substring + recall@1 / recall@K. Resultado JSON guardado en
 `.memory/eval/runs/<ISO>.json`.
@@ -157,8 +157,8 @@ def _save_run(root: Path, run: dict) -> Path | None:
         out.write_text(json.dumps(run, indent=2, ensure_ascii=False) + "\n")
         return out
     except OSError as e:
-        print(f"[wikiforge eval] no se pudo guardar el run en disco: {e}", file=sys.stderr)
-        print("[wikiforge eval] dump del run a stdout para no perder datos:", file=sys.stderr)
+        print(f"[fairlead eval] no se pudo guardar el run en disco: {e}", file=sys.stderr)
+        print("[fairlead eval] dump del run a stdout para no perder datos:", file=sys.stderr)
         sys.stdout.write(json.dumps(run, indent=2, ensure_ascii=False) + "\n")
         return None
 
@@ -213,7 +213,7 @@ def run(
     qp = Path(questions_path) if questions_path else (ctx.root / DEFAULT_QUESTIONS)
     if not qp.is_file():
         print(
-            f"[wikiforge eval] no encuentro questions en {qp}\n"
+            f"[fairlead eval] no encuentro questions en {qp}\n"
             "Crea `.memory/eval/questions.json` (ver ADR 0010 para formato).",
             file=sys.stderr,
         )
@@ -222,16 +222,16 @@ def run(
     try:
         suite = json.loads(qp.read_text())
     except json.JSONDecodeError as e:
-        print(f"[wikiforge eval] {qp} no es JSON válido: {e}", file=sys.stderr)
+        print(f"[fairlead eval] {qp} no es JSON válido: {e}", file=sys.stderr)
         return 1
     except OSError as e:
-        print(f"[wikiforge eval] no se pudo leer {qp}: {e}", file=sys.stderr)
+        print(f"[fairlead eval] no se pudo leer {qp}: {e}", file=sys.stderr)
         return 1
 
     try:
         questions = _validate_suite(suite, qp)
     except ValueError as e:
-        print(f"[wikiforge eval] {e}", file=sys.stderr)
+        print(f"[fairlead eval] {e}", file=sys.stderr)
         return 1
 
     scoring = suite.get("scoring") if isinstance(suite.get("scoring"), dict) else {}
@@ -245,7 +245,7 @@ def run(
     primary_st = search_types[0]
 
     print(
-        f"[wikiforge eval] dataset={dataset_id} root={ctx.root} "
+        f"[fairlead eval] dataset={dataset_id} root={ctx.root} "
         f"questions={len(questions)} search_types={search_types} top_k={effective_top_k} "
         f"timeout={timeout_s:.0f}s rerank={rerank}"
     )
@@ -304,8 +304,8 @@ def run(
     if save:
         out = _save_run(ctx.root, run_doc)
         if out is not None:
-            print(f"\n[wikiforge eval] run guardado en {out}")
+            print(f"\n[fairlead eval] run guardado en {out}")
     else:
-        print("\n[wikiforge eval] --no-save: run NO guardado")
+        print("\n[fairlead eval] --no-save: run NO guardado")
 
     return 0

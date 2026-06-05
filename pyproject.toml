@@ -1,18 +1,19 @@
 [project]
-name = "wikiforge"
+name = "fairlead"
 version = "0.1.0"
-description = "MCP-first persistent memory + KG/RAG per project for AI dev tools"
+description = "Repo-scoped context guidance for coding agents. MCP-first persistent memory + KG/RAG per project."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Daniel Alonso Gómez", email = "daniel@dalonsogomez.com" }]
 license = { text = "MIT" }
 dependencies = [
-    "openai>=1.68,<2",
+    "openai>=2.20,<3",
     "httpx>=0.28,<1",
 ]
 
 [project.scripts]
-wikiforge = "wikiforge.cli:main"
+fairlead = "wikiforge.cli:main"
+wikiforge = "wikiforge.cli:legacy_main"
 
 [project.optional-dependencies]
 # Stack ADR 0005 + ADR 0006 (con dodge ladybug del ADR 0007).
@@ -24,7 +25,23 @@ cognee = [
     "kuzu>=0.11,<0.12",
     "ladybug>=0.16,<0.17",   # rebrand de Kuzu post-Apple; cognee 1.0.5 lo importa hardcoded
     "lancedb>=0.29,<0.30",   # 0.29.2 verificado; 0.30+ rompe lance_namespace
+    "lance-namespace==0.6.1",
+    "lance-namespace-urllib3-client==0.6.1",
     "pylance<=0.36.0",       # constraint de cognee
+]
+ducklake = [
+    "duckdb>=1.5,<2",
+    "ducklake>=0.1,<1",
+    "lancedb>=0.29,<0.30",
+    "lance-namespace==0.6.1",
+    "lance-namespace-urllib3-client==0.6.1",
+]
+mcp = [
+    "mcp>=1.0,<2",
+]
+test = [
+    "pytest>=8,<9",
+    "pytest-timeout>=2,<3",
 ]
 
 [build-system]
@@ -36,3 +53,7 @@ packages = ["src/wikiforge"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/wikiforge"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+timeout = 60

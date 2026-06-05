@@ -1,4 +1,4 @@
-"""CLI `wikiforge` — punto de entrada con subcomandos.
+"""CLI `fairlead` — punto de entrada con subcomandos.
 
 Comandos canónicos AGENTS.md sec. 7:
 - init, index, ask, promote-decision, promote-to-global, demote, sync, eval, wiki build
@@ -24,7 +24,7 @@ def _slugify(text: str, max_len: int = 60) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="wikiforge", description="MCP-first KG/RAG per project for AI dev tools.")
+    p = argparse.ArgumentParser(prog="fairlead", description="Repo-scoped context guidance for coding agents.")
     sub = p.add_subparsers(dest="cmd", required=True, metavar="COMMAND")
 
     p_init = sub.add_parser("init", help="crear .kg/.rag/.memory + .kgconfig + symlinks")
@@ -69,8 +69,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_rev.add_argument("--temperature", type=float, default=0.0, help="temperatura (default 0.0)")
     p_rev.add_argument("--max-tokens", type=int, default=4096, help="máximo tokens de salida (default 4096)")
 
-    p_wiki = sub.add_parser("wiki", help="(stub Mes 2+) generar wiki publicable")
+    p_wiki = sub.add_parser("wiki", help="generar wiki publicable desde DuckLake")
     p_wiki.add_argument("subcmd", choices=["build"])
+    p_wiki.add_argument("--output", default=None, help="directorio de salida (default: wiki/)")
+
+    p_mcp = sub.add_parser("mcp-serve", help="lanzar MCP server (stdio transport)")
 
     p_status = sub.add_parser("status", help="resumen del proyecto activo + perfil global")
 
@@ -127,8 +130,13 @@ def main(argv: list[str] | None = None) -> int:
             rerank=args.rerank,
         )
     if cmd == "wiki":
-        print("[wikiforge wiki build] stub — Mes 2+; ver AGENTS.md sec. 7", file=sys.stderr)
-        return 1
+        from .commands import wiki as wiki_cmd
+        return wiki_cmd.run(output_dir=args.output)
+    if cmd == "mcp-serve":
+        import asyncio
+        from .mcp_server import main as mcp_main
+        asyncio.run(mcp_main())
+        return 0
     if cmd == "review":
         models = args.models.split(",") if args.models else None
         return review_cmd.run(
@@ -141,6 +149,15 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"unknown command: {cmd}", file=sys.stderr)
     return 2
+
+
+def legacy_main(argv: list[str] | None = None) -> int:
+    """Entry point for the deprecated `wikiforge` command. Use `fairlead` instead."""
+    print(
+        "\033[33mWarning:\033[0m `wikiforge` is deprecated. Use `fairlead` instead.",
+        file=sys.stderr,
+    )
+    return main(argv)
 
 
 if __name__ == "__main__":

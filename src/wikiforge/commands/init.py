@@ -1,4 +1,4 @@
-"""`wikiforge init`: crear .kg/.rag/.memory/.kgconfig + symlinks AGENTS.md → CLAUDE.md."""
+"""`fairlead init`: crear .kg/.rag/.memory/.kgconfig + symlinks AGENTS.md → CLAUDE.md."""
 from __future__ import annotations
 
 import sys
@@ -25,7 +25,7 @@ promotion_policy = "explicit_only"
 AGENTS_PROJECT_TEMPLATE = """\
 # Proyecto: {dataset}
 
-> Plantilla generada por `wikiforge init`. Edita libremente.
+> Plantilla generada por `fairlead init`. Edita libremente.
 
 ## Stack
 - Lenguaje principal: ?
@@ -40,8 +40,8 @@ AGENTS_PROJECT_TEMPLATE = """\
 ## Memoria del proyecto
 - Contexto extendido en `.memory/MEMORY.md` y `.memory/decisions/`.
 - Knowledge graph disponible vía MCP server `cognee` con `dataset_id={dataset}`.
-- Para promover una decisión: `wikiforge promote-decision "..."`.
-- Sigue las reglas del `AGENTS.md` canónico de WikiForge.
+- Para promover una decisión: `fairlead promote-decision "..."`.
+- Sigue las reglas del `AGENTS.md` canónico de Fairlead.
 """
 
 MEMORY_INDEX_TEMPLATE = """\
@@ -51,7 +51,7 @@ MEMORY_INDEX_TEMPLATE = """\
 
 ## Decisiones (ADRs)
 
-(vacío — usa `wikiforge promote-decision` para registrar la primera)
+(vacío — usa `fairlead promote-decision` para registrar la primera)
 
 ## Planes activos
 
@@ -66,8 +66,8 @@ MEMORY_INDEX_TEMPLATE = """\
 def run(dataset: str | None = None, force: bool = False) -> int:
     root = find_git_root() or Path.cwd().resolve()
     dataset = dataset or root.name
-    print(f"[wikiforge init] root={root}")
-    print(f"[wikiforge init] dataset_id={dataset}")
+    print(f"[fairlead init] root={root}")
+    print(f"[fairlead init] dataset_id={dataset}")
 
     created: list[str] = []
     skipped: list[str] = []
@@ -110,14 +110,14 @@ def run(dataset: str | None = None, force: bool = False) -> int:
         p.symlink_to(target)
         created.append(rel)
 
-    print(f"[wikiforge init] created: {len(created)} entries")
+    print(f"[fairlead init] created: {len(created)} entries")
     for c in created:
         print(f"  + {c}")
     if skipped:
-        print(f"[wikiforge init] skipped (existing): {len(skipped)}")
+        print(f"[fairlead init] skipped (existing): {len(skipped)}")
         for s in skipped:
             print(f"  · {s}")
 
     print()
-    print("[wikiforge init] done. Próximo paso: `wikiforge index`.")
+    print("[fairlead init] done. Próximo paso: `fairlead index`.")
     return 0

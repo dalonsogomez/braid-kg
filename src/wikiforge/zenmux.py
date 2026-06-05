@@ -67,13 +67,13 @@ def resolve_slug(alias_or_slug: str) -> str:
 
 
 def _get_api_key() -> str:
-    """Obtiene ZENMUX_API_KEY del entorno o de ``~/.config/wikiforge/secrets.env``."""
+    """Obtiene ZENMUX_API_KEY del entorno o de ``~/.config/fairlead/secrets.env``."""
     load_secrets_into_env()
     key = os.environ.get("ZENMUX_API_KEY")
     if not key:
         msg = (
             "ZENMUX_API_KEY no encontrada. "
-            "Añádela a ~/.config/wikiforge/secrets.env:\n"
+            "Añádela a ~/.config/fairlead/secrets.env:\n"
             '  ZENMUX_API_KEY="sk-ss-v1-..."'
         )
         raise OSError(msg)

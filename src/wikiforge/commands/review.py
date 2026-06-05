@@ -1,9 +1,9 @@
-"""``wikiforge review`` — lanza los 3 modelos de ZenMux en paralelo y consolida resultados.
+"""``fairlead review`` — lanza los 3 modelos de ZenMux en paralelo y consolida resultados.
 
 Uso:
-    wikiforge review "<diff o descripción del cambio>"
-    wikiforge review --system-prompt "Eres revisor experto" "<código a revisar>"
-    wikiforge review --models opus-4-7-think,gpt-5-3-codex "<código>"
+    fairlead review "<diff o descripción del cambio>"
+    fairlead review --system-prompt "Eres revisor experto" "<código a revisar>"
+    fairlead review --models opus-4-7-think,gpt-5-3-codex "<código>"
 """
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def run(
 
     sp = system_prompt or DEFAULT_SYSTEM_PROMPT
 
-    print("[wikiforge review] modelos:", ", ".join(models))
+    print("[fairlead review] modelos:", ", ".join(models))
     print()
 
     results = review_in_parallel(
@@ -63,11 +63,11 @@ def run(
             print()
 
     if errors == len(results):
-        print("[wikiforge review] TODOS los modelos fallaron — revisa tu ZENMUX_API_KEY y red.")
+        print("[fairlead review] TODOS los modelos fallaron — revisa tu ZENMUX_API_KEY y red.")
         return 1
 
     if errors > 0:
-        print(f"[wikiforge review] {errors}/{len(results)} modelos fallaron — parcial.")
+        print(f"[fairlead review] {errors}/{len(results)} modelos fallaron — parcial.")
 
     return 0
 

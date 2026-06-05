@@ -1,4 +1,4 @@
-"""Resolución de contexto AGENTS.md sec. 4.3: cwd → git root → .kgconfig → ~/.wikiforge/profile/."""
+"""Resolución de contexto AGENTS.md sec. 4.3: cwd → git root → .kgconfig → ~/.fairlead/profile/."""
 from __future__ import annotations
 
 import os
@@ -7,8 +7,8 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-WIKIFORGE_HOME = Path.home() / ".wikiforge"
-PROFILE_DIR = WIKIFORGE_HOME / "profile"
+FAIRLEAD_HOME = Path.home() / ".fairlead"
+PROFILE_DIR = FAIRLEAD_HOME / "profile"
 GLOBAL_DATASET_ID = "_global_profile"
 
 
@@ -100,11 +100,11 @@ def resolve_context(start: Path | None = None) -> ProjectContext:
 
 
 def secrets_path() -> Path:
-    return Path.home() / ".config/wikiforge/secrets.env"
+    return Path.home() / ".config/fairlead/secrets.env"
 
 
 def load_secrets_into_env() -> None:
-    """Carga `~/.config/wikiforge/secrets.env` en `os.environ` sin sobreescribir."""
+    """Carga `~/.config/fairlead/secrets.env` en `os.environ` sin sobreescribir."""
     p = secrets_path()
     if not p.is_file():
         return

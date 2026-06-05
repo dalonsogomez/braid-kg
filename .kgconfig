@@ -1,4 +1,4 @@
-dataset_id = "WikiForge"
+dataset_id = "Fairlead"
 graph_backend = "kuzu"
 vector_backend = "lancedb"
 embedder = "bge-m3"

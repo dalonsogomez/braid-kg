@@ -1,4 +1,4 @@
-"""`wikiforge promote-decision`, `promote-to-global`, `demote` — promoción manual de memoria.
+"""`fairlead promote-decision`, `promote-to-global`, `demote` — promoción manual de memoria.
 
 Regla de oro AGENTS.md sec. 4.2: NO existe promoción automática.
 """
@@ -20,7 +20,7 @@ ADR_TEMPLATE = """\
 - **Fecha:** {date}
 - **Decisor:** {decisor}
 - **Tags:** {tags}
-- **Origen:** promoción manual sesión → proyecto vía `wikiforge promote-decision`
+- **Origen:** promoción manual sesión → proyecto vía `fairlead promote-decision`
 
 ---
 
@@ -51,7 +51,7 @@ def run_promote_decision(text: str, title: str | None = None, tags: str = "") ->
     ctx = resolve_context()
     decisions_dir = ctx.memory_dir / "decisions"
     if not decisions_dir.is_dir():
-        print(f"[promote-decision] no existe {decisions_dir} — corre `wikiforge init` primero.", file=sys.stderr)
+        print(f"[promote-decision] no existe {decisions_dir} — corre `fairlead init` primero.", file=sys.stderr)
         return 1
 
     title = title or text.split(".")[0][:80]
@@ -70,12 +70,22 @@ def run_promote_decision(text: str, title: str | None = None, tags: str = "") ->
     )
     out.write_text(body)
     print(f"[promote-decision] creado {out.relative_to(ctx.root)}")
+
+    # Also store in DuckLake catalog for SQL-queryable access
+    try:
+        from ..ducklake import WikiForgeCatalog
+        with WikiForgeCatalog() as cat:
+            cat.store_adr(num, title, "Active", text, text, project_slug=ctx.dataset_id)
+        print(f"[promote-decision] ADR {num} también registrado en DuckLake catalog.")
+    except Exception as e:
+        print(f"[promote-decision] DuckLake no disponible (no es error crítico): {e}", file=sys.stderr)
+
     print(f"[promote-decision] recomendación: añade una línea en {ctx.memory_dir / 'MEMORY.md'} apuntando a este ADR.")
     return 0
 
 
 def run_promote_to_global(decision_id: str) -> int:
-    """Copia un ADR del proyecto al perfil global (`~/.wikiforge/profile/decisions/`)."""
+    """Copia un ADR del proyecto al perfil global (`~/.fairlead/profile/decisions/`)."""
     ctx = resolve_context()
     decisions_dir = ctx.memory_dir / "decisions"
     matches = list(decisions_dir.glob(f"{decision_id}*.md")) or list(decisions_dir.glob(f"*{decision_id}*.md"))

@@ -1,4 +1,4 @@
-"""`wikiforge index`: ingestar código + docs del proyecto activo a Cognee.
+"""`fairlead index`: ingestar código + docs del proyecto activo a Cognee.
 
 ADR 0009: incremental real por mtime + escritura de `.kg/last_index.json` para
 que `claude-session-start` pueda detectar staleness en <500 ms.
@@ -76,13 +76,13 @@ def _write_state(root: Path, dataset: str, paths: list[Path]) -> None:
 
 def run(rebuild: bool = False, extra_globs: list[str] | None = None) -> int:
     ctx = resolve_context()
-    print(f"[wikiforge index] root={ctx.root} dataset={ctx.dataset_id}")
+    print(f"[fairlead index] root={ctx.root} dataset={ctx.dataset_id}")
     if not ctx.has_kg and not (ctx.root / ".kgconfig").is_file():
-        print("[wikiforge index] no .kg/ ni .kgconfig encontrados — corre `wikiforge init` primero.", file=sys.stderr)
+        print("[fairlead index] no .kg/ ni .kgconfig encontrados — corre `fairlead init` primero.", file=sys.stderr)
         return 1
 
     if rebuild:
-        print("[wikiforge index] --rebuild: prune_data + prune_system (DESTRUCTIVO)...")
+        print("[fairlead index] --rebuild: prune_data + prune_system (DESTRUCTIVO)...")
         run_prune()
 
     state = _load_state(ctx.root) if not rebuild else None
@@ -97,7 +97,7 @@ def run(rebuild: bool = False, extra_globs: list[str] | None = None) -> int:
     paths_processed = [p for p, _ in pairs]
 
     if state and not pairs:
-        print(f"[wikiforge index] al día — sin cambios desde {state.get('timestamp')}")
+        print(f"[fairlead index] al día — sin cambios desde {state.get('timestamp')}")
         # Re-escribimos state para refrescar el conteo total (si cambió por nuevos archivos no-modificados).
         # Para eso necesitamos el snapshot completo de paths actuales:
         all_paths = (
@@ -108,18 +108,18 @@ def run(rebuild: bool = False, extra_globs: list[str] | None = None) -> int:
         return 0
 
     if not inputs and not state:
-        print("[wikiforge index] FATAL: no inputs collected", file=sys.stderr)
+        print("[fairlead index] FATAL: no inputs collected", file=sys.stderr)
         return 1
 
     print(
-        f"[wikiforge index] collected {len(code_pairs)} code + {len(doc_pairs)} doc "
+        f"[fairlead index] collected {len(code_pairs)} code + {len(doc_pairs)} doc "
         f"+ {len(extra_pairs)} extra = {len(inputs)} total"
         + (f" (incremental desde {state.get('timestamp')})" if state else "")
     )
-    print(f"[wikiforge index] adding to dataset {ctx.dataset_id}...")
+    print(f"[fairlead index] adding to dataset {ctx.dataset_id}...")
     run_add(inputs, ctx.dataset_id)
 
-    print("[wikiforge index] cognifying (esto invoca el LLM, puede tardar varios minutos)...")
+    print("[fairlead index] cognifying (esto invoca el LLM, puede tardar varios minutos)...")
     run_cognify(ctx.dataset_id)
 
     # State con TODOS los paths actuales del repo, no solo los modificados.
@@ -128,5 +128,5 @@ def run(rebuild: bool = False, extra_globs: list[str] | None = None) -> int:
         + [p for p, _ in _collect(ctx.root, DEFAULT_DOC_GLOBS, "doc")]
     )
     _write_state(ctx.root, ctx.dataset_id, all_paths)
-    print(f"[wikiforge index] done. state escrito en {_state_path(ctx.root)}.")
+    print(f"[fairlead index] done. state escrito en {_state_path(ctx.root)}.")
     return 0

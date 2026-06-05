@@ -1,7 +1,7 @@
 """Demo de criterio de salida Fase 1: cognify mini + promote-decision + recall.
 
 Reset cognee_system corrupto + cognify de 3 archivos (AGENTS.md, Plan 0002, ADR 0006)
-para demo end-to-end del flujo "promote-decision -> recall via wikiforge ask".
+para demo end-to-end del flujo "promote-decision -> recall via fairlead ask".
 """
 from __future__ import annotations
 
