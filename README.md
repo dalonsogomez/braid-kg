@@ -89,6 +89,22 @@ CLAUDE.md -> AGENTS.md
 Do not move those files into `.braid/`. They are part of the cross-agent
 contract, not rebuildable runtime state.
 
+## Operational Patterns
+
+Braid treats recurring repo-memory problems as explicit operational patterns,
+not hidden heuristics. These patterns are intentionally implemented through the
+existing commands and tests instead of a new CLI surface.
+
+![Braid operational patterns](docs/diagrams/braid-operational-patterns.svg)
+
+| Pattern | How Braid applies it |
+| --- | --- |
+| Boundary | The nearest real project boundary wins. A parent such as `~/Developer` may have `.braid/`, but a child project with markers owns its own context. |
+| Diagnose | Run `braid doctor` before changing state. It reports path resolution, layout, legacy drift, agents, secrets, GitHub remote, and catalog health. |
+| Activate | Run `braid agent-init --fix` to repair only Braid-managed agent config while preserving unrelated settings. |
+| Isolate | DuckLake, FTS, and LanceDB tests use temporary catalogs and never depend on the real local `.braid/kg` catalog. |
+| Evaluate | Retrieval changes are gated by `braid eval` evidence, not by architecture guesses. |
+
 ## Quick Start
 
 From the Braid checkout:
@@ -274,6 +290,10 @@ Retrieval architecture changes should wait for evidence from `braid eval`. If
 grounding, recall, or reranking fails in measurable ways, the change should be
 documented with an ADR and validated against temporary DuckLake/Cognee fixtures
 before touching live project catalogs.
+
+A future `braid patterns` command may be useful if these operational patterns
+need machine-readable reporting beyond `doctor --json`, but it should be added
+only with a new ADR, tests, and a stable JSON interface.
 
 ## Status
 

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">Braid operational patterns</title>
+  <desc id="desc">Braid handles recurring repository-memory problems through boundary resolution, diagnostics, agent activation, and eval-gated retrieval changes.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <style>
+      .title { font: 700 34px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+      .subtitle { font: 19px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #334155; }
+      .label { font: 700 24px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+      .body { font: 17px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #334155; }
+      .mono { font: 17px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #111827; }
+      .small { font: 15px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+      .card { rx: 16; ry: 16; stroke-width: 2.5; }
+      .soft { stroke-width: 2; }
+    </style>
+  </defs>
+  <rect width="1280" height="720" fill="#ffffff"/>
+  <text x="64" y="58" class="title"><tspan x="64" >Operational patterns make Braid predictable</tspan></text>
+  <text x="64" y="94" class="subtitle"><tspan x="64" >The project keeps repeated cases as explicit workflows, not hidden heuristics.</tspan><tspan x="64" dy="1.45em">These patterns are checked by doctor, agent-init, tests, and CI.</tspan></text>
+
+  <rect x="80" y="165" width="500" height="180" class="card" fill="#dbeafe" stroke="#1d4ed8"/>
+  <text x="116" y="210" class="label" fill="#1e3a8a"><tspan x="116" >Boundary</tspan></text>
+  <text x="116" y="248" class="body"><tspan x="116" >Nearest real project wins</tspan></text>
+  <text x="116" y="286" class="small"><tspan x="116" >A parent can have .braid/,</tspan><tspan x="116" dy="1.45em">but child markers take precedence.</tspan></text>
+
+  <rect x="700" y="165" width="500" height="180" class="card" fill="#ccfbf1" stroke="#0f766e"/>
+  <text x="736" y="210" class="label" fill="#134e4a"><tspan x="736" >Diagnose</tspan></text>
+  <text x="736" y="248" class="body"><tspan x="736" >Check before changing state</tspan></text>
+  <text x="736" y="286" class="small"><tspan x="736" >braid doctor reports layout,</tspan><tspan x="736" dy="1.45em">legacy drift, agents, and catalog health.</tspan></text>
+
+  <rect x="80" y="400" width="500" height="180" class="card" fill="#ffedd5" stroke="#7c2d12"/>
+  <text x="116" y="445" class="label" fill="#7c2d12"><tspan x="116" >Activate</tspan></text>
+  <text x="116" y="483" class="body"><tspan x="116" >Repair managed agent config</tspan></text>
+  <text x="116" y="521" class="small"><tspan x="116" >braid agent-init --fix</tspan><tspan x="116" dy="1.45em">preserves unrelated settings.</tspan></text>
+
+  <rect x="700" y="400" width="500" height="180" class="card" fill="#ede9fe" stroke="#4c1d95"/>
+  <text x="736" y="445" class="label" fill="#4c1d95"><tspan x="736" >Evaluate</tspan></text>
+  <text x="736" y="483" class="body"><tspan x="736" >Gate retrieval changes with evidence</tspan></text>
+  <text x="736" y="521" class="small"><tspan x="736" >Use braid eval and temporary</tspan><tspan x="736" dy="1.45em">DuckLake/FTS/LanceDB fixtures.</tspan></text>
+
+  <path d="M 580 255 L 700 255" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M 330 345 L 330 400" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M 950 345 L 950 400" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M 580 490 L 700 490" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
+</svg>

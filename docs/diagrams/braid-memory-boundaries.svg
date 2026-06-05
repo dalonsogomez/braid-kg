@@ -1,50 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="520" viewBox="0 0 1120 520" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
   <title id="title">Braid memory boundaries</title>
-  <desc id="desc">Project-local and global Braid memory are separated by directory boundary and dataset identifier.</desc>
+  <desc id="desc">Braid keeps project memory, parent memory, global profile memory, and shared Cognee storage separated by boundary and dataset identifier.</desc>
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
     </marker>
     <style>
-      .label { font: 700 26px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #111827; }
-      .body { font: 18px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #1f2937; }
+      .title { font: 700 34px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+      .subtitle { font: 19px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #334155; }
+      .label { font: 700 24px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+      .body { font: 17px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #334155; }
       .mono { font: 17px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #111827; }
-      .small { font: 15px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #4b5563; }
-      .card { rx: 18; ry: 18; stroke-width: 2.5; }
+      .small { font: 15px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+      .card { rx: 16; ry: 16; stroke-width: 2.5; }
+      .soft { stroke-width: 2; }
     </style>
   </defs>
+  <rect width="1280" height="720" fill="#ffffff"/>
+  <text x="64" y="58" class="title"><tspan x="64" >Memory follows the nearest real project boundary</tspan></text>
+  <text x="64" y="94" class="subtitle"><tspan x="64" >A parent directory can have Braid state, but a child project wins when your cwd is inside the child.</tspan><tspan x="64" dy="1.45em">Global memory is a fallback profile, not a project replacement.</tspan></text>
 
-  <rect width="1120" height="520" fill="#ffffff"/>
-  <text x="56" y="58" class="label">Braid keeps memory scoped to the nearest real project</text>
-  <text x="56" y="90" class="body">A parent may be a Braid project, but a child project wins when your cwd is inside the child.</text>
+  <rect x="64" y="170" width="330" height="200" class="card" fill="#ccfbf1" stroke="#0f766e"/>
+  <text x="96" y="214" class="label" fill="#134e4a"><tspan x="96" >$HOME</tspan></text>
+  <text x="96" y="252" class="mono"><tspan x="96" >~/.braid/profile/</tspan></text>
+  <text x="96" y="290" class="body"><tspan x="96" >Global personal memory</tspan></text>
+  <text x="96" y="326" class="small"><tspan x="96" >Stable preferences only.</tspan><tspan x="96" dy="1.45em">Used after project miss.</tspan></text>
 
-  <rect x="56" y="138" width="288" height="190" class="card" fill="#ccfbf1" stroke="#0f766e"/>
-  <text x="84" y="178" class="label" fill="#134e4a">$HOME</text>
-  <text x="84" y="216" class="mono">~/.braid/profile/</text>
-  <text x="84" y="252" class="body">Global personal memory</text>
-  <text x="84" y="282" class="small">Stable preferences and cross-project defaults.</text>
-  <text x="84" y="306" class="small">Fallback only; not mixed by default.</text>
+  <path d="M 394 270 L 466 270" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
 
-  <rect x="416" y="138" width="288" height="190" class="card" fill="#dbeafe" stroke="#1d4ed8"/>
-  <text x="444" y="178" class="label" fill="#1e3a8a">Parent directory</text>
-  <text x="444" y="216" class="mono">~/Developer/.braid/</text>
-  <text x="444" y="252" class="body">Valid when cwd is parent</text>
-  <text x="444" y="282" class="small">Can have its own dataset and memory.</text>
-  <text x="444" y="306" class="small">Does not override child projects.</text>
+  <rect x="466" y="170" width="330" height="200" class="card" fill="#dbeafe" stroke="#1d4ed8"/>
+  <text x="498" y="214" class="label" fill="#1e3a8a"><tspan x="498" >Parent project</tspan></text>
+  <text x="498" y="252" class="mono"><tspan x="498" >~/Developer/.braid/</tspan></text>
+  <text x="498" y="290" class="body"><tspan x="498" >Valid from parent cwd</tspan></text>
+  <text x="498" y="326" class="small"><tspan x="498" >Own dataset and memory.</tspan><tspan x="498" dy="1.45em">Does not override children.</tspan></text>
 
-  <rect x="776" y="138" width="288" height="190" class="card" fill="#ffedd5" stroke="#7c2d12"/>
-  <text x="804" y="178" class="label" fill="#7c2d12">Child project</text>
-  <text x="804" y="216" class="mono">&lt;project&gt;/.braid/</text>
-  <text x="804" y="252" class="body">Nearest boundary wins</text>
-  <text x="804" y="282" class="small">Markers: .git, pyproject.toml,</text>
-  <text x="804" y="306" class="small">README.md, Dockerfile, go.mod, etc.</text>
+  <path d="M 796 270 L 868 270" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
 
-  <path d="M 344 232 C 372 232, 388 232, 416 232" fill="none" stroke="#374151" stroke-width="2.5" marker-end="url(#arrow)"/>
-  <path d="M 704 232 C 732 232, 748 232, 776 232" fill="none" stroke="#374151" stroke-width="2.5" marker-end="url(#arrow)"/>
-  <text x="364" y="210" class="small">fallback after project miss</text>
-  <text x="714" y="210" class="small">child boundary wins</text>
+  <rect x="868" y="170" width="348" height="200" class="card" fill="#ffedd5" stroke="#7c2d12"/>
+  <text x="900" y="214" class="label" fill="#7c2d12"><tspan x="900" >Child project</tspan></text>
+  <text x="900" y="252" class="mono"><tspan x="900" >&lt;project&gt;/.braid/</tspan></text>
+  <text x="900" y="290" class="body"><tspan x="900" >Nearest boundary wins</tspan></text>
+  <text x="900" y="326" class="small"><tspan x="900" >Markers: .git, pyproject.toml,</tspan><tspan x="900" dy="1.45em">README.md, Dockerfile, go.mod.</tspan></text>
 
-  <rect x="238" y="382" width="644" height="86" class="card" fill="#ede9fe" stroke="#4c1d95"/>
-  <text x="270" y="418" class="label" fill="#4c1d95">Shared backend: ~/.braid/cognee/</text>
-  <text x="270" y="450" class="body">Storage can be shared, but every scope is isolated by dataset_id.</text>
+  <rect x="216" y="475" width="848" height="134" class="card" fill="#ede9fe" stroke="#4c1d95"/>
+  <text x="256" y="520" class="label" fill="#4c1d95"><tspan x="256" >Shared backend: ~/.braid/cognee/</tspan></text>
+  <text x="256" y="558" class="body"><tspan x="256" >Physical storage can be shared across scopes.</tspan><tspan x="256" dy="1.45em">Logical records stay isolated by dataset_id.</tspan></text>
 </svg>
