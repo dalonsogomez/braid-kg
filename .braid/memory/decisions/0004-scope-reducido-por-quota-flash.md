@@ -23,7 +23,7 @@ El usuario me pide "elige el mejor modelo". El mejor disponible **sin billing** 
 ### 2.1. Modelo principal: `gemini-3-flash-preview` (sin upgrade)
 
 Razones:
-- Es el único modelo Gemini moderno disponible para el proyecto WikiForge (#846938751343) sin billing.
+- Es el único modelo Gemini moderno disponible para el proyecto Braid (#846938751343) sin billing.
 - Pro requiere billing → fuera de alcance hoy.
 - Claude Sonnet 4.6 es opción cloud autorizada (AGENTS.md sec. 3) pero introduce un proveedor adicional sin necesidad clara.
 
@@ -58,7 +58,7 @@ Cuando el usuario active billing:
 1. Volver a `index_phase0.py` con los globs originales (`src/**/*.py`, `tests/**/*.py`, `README.md`, `MEMORY.md`, `docs/**/*.md`).
 2. Re-cognify completo.
 3. Re-validar.
-4. Tag `wf-fase-0-completed-full-scope-YYYY-MM-DD`.
+4. Tag `braid-fase-0-completed-full-scope-YYYY-MM-DD`.
 
 Hasta entonces, este ADR vigente; las 5 preguntas se responden sobre el subconjunto.
 

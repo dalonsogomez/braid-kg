@@ -24,7 +24,7 @@ Supported providers are: neo4j, kuzu, kuzu-remote, postgres, neptune, neptune_an
 
 Adicionalmente, el usuario delega el cierre de Fase 0 sin su presencia ("me voy a casa, a comer algo"), pidiendo:
 
-1. **Snapshot de máquina del tiempo** antes del pivote (cumplido en commit `828824c`, tag `wf-checkpoint-2026-05-02-1746`).
+1. **Snapshot de máquina del tiempo** antes del pivote (cumplido en commit `828824c`, tag `braid-checkpoint-2026-05-02-1746`).
 2. **Implementación completa con modelo local** que el agente le recomendó.
 3. **Cierre de Fase 0** sin más interrupciones.
 
@@ -47,7 +47,7 @@ Esta delegación es la base del status `Accepted` automático de este ADR. El us
 ADR 0001 pasa a status `Superseded` por este ADR. Razones:
 
 - Stack Gemini deja de aplicar.
-- API keys siguen en `~/.config/wikiforge/secrets.env` por si se necesitaran en futuro. No las borramos.
+- API keys siguen en `~/.config/braid/secrets.env` por si se necesitaran en futuro. No las borramos.
 - Síntomas 11.8 / 11.9 / 11.10 introducidos por ADR 0001 se eliminan del AGENTS.md (eran síntomas de migración inversa a Ollama, ya estamos ahí).
 - Modelos Gemini siguen verificados como disponibles en el proyecto Google AI Studio (`models/gemini-3-flash-preview`, `models/gemini-3.1-pro-preview`, `models/gemini-embedding-001`); registrado en sec. 7.1 del ADR 0001.
 
@@ -70,7 +70,7 @@ VECTOR_DB_PROVIDER=lancedb
 ENABLE_BACKEND_ACCESS_CONTROL=false
 ```
 
-**Shim `~/.wikiforge/bin/cognee-mcp-stdio.sh`:** simplificado, ya no necesita leer GEMINI_API_KEY (Ollama usa una key dummy `ollama`).
+**Shim `~/.braid/bin/cognee-mcp-stdio.sh`:** simplificado, ya no necesita leer GEMINI_API_KEY (Ollama usa una key dummy `ollama`).
 
 ### 2.4. Privacidad
 
@@ -114,7 +114,7 @@ Este ADR 0002 introduce una **excepción provisional** a esa regla por necesidad
 - **Cuándo se cierra la excepción:** cuando aplique cualquiera de:
   - **5.1.** Cognee reintroduce `networkx` como provider (se vuelve al original).
   - **5.2.** Aparece un nuevo provider in-process en Cognee (p.ej. SQLite-graph, DuckDB-graph) que no esté en sec. 9 anti-patrón #4.
-  - **5.3.** Se aplica el síntoma 11.1 (>100 000 nodos o `wikiforge ask` > 2s p50) → migración a otro backend con ADR de cierre.
+  - **5.3.** Se aplica el síntoma 11.1 (>100 000 nodos o `braid ask` > 2s p50) → migración a otro backend con ADR de cierre.
 
 Hasta entonces, **kuzu queda como provider activo** y el descarte de la sec. 3 / sec. 12 del AGENTS.md queda **suspendido por este ADR** específicamente para Fase 0/1. Cualquier proyecto futuro que invoque la regla "no Kuzu" debe consultar este ADR primero.
 
@@ -130,7 +130,7 @@ Reemplazar las filas de LLM y Embeddings introducidas por ADR 0001:
 -| LLM cloud secundario | **Claude Sonnet 4.6** vía API | — | Reservado para wikis públicos y casos donde Gemini no aplique |
 -| Embeddings | **Gemini `gemini-embedding-001`** ... |
 +| LLM local | **Ollama + `qwen3:30b`** (mejor aproximación a `qwen3.5:35b-a3b` del AGENTS.md original; este modelo no existe en Ollama hoy 2026-05-02) — ver ADR 0002 | `qwen3:32b` (dense) si síntoma 11.x lo justifica; `mlx-lm` directo si Ollama falla | Activo (Fase 0/1) |
-+| LLM cloud | **Claude Sonnet 4.6** vía API | — | Reservado para wikis públicos y extracción crítica si la calidad local no basta (medido en `wikiforge eval` — Fase 2) |
++| LLM cloud | **Claude Sonnet 4.6** vía API | — | Reservado para wikis públicos y extracción crítica si la calidad local no basta (medido en `braid eval` — Fase 2) |
 +| Embeddings | **Ollama + `bge-m3`** (~570 MB, multilingüe sólido) — ver ADR 0002 | `qwen3-embedding-8b` cuando aplique síntoma 11.3 | Activo |
 ```
 
@@ -159,7 +159,7 @@ Esos síntomas eran de migración inversa a Ollama. Ya estamos en Ollama → no 
 
 ```diff
 +- **Cognee 1.0 sin networkx (descubrimiento del 2026-05-02).** El stack canónico original asumía networkx; ADR 0002 documenta el pivote a Kuzu como excepción. Si Cognee reintroduce networkx, ADR 0002 sec. 5.1 dispara reversión.
-+- **`qwen3:30b` vs `qwen3.5:35b-a3b`.** El modelo original del AGENTS.md no existe en Ollama hoy; ADR 0002 documenta `qwen3:30b` como aproximación. Si la familia Qwen 3.5 llega a Ollama o si `qwen3:30b` rinde por debajo del umbral en `wikiforge eval`, ADR de actualización.
++- **`qwen3:30b` vs `qwen3.5:35b-a3b`.** El modelo original del AGENTS.md no existe en Ollama hoy; ADR 0002 documenta `qwen3:30b` como aproximación. Si la familia Qwen 3.5 llega a Ollama o si `qwen3:30b` rinde por debajo del umbral en `braid eval`, ADR de actualización.
 ```
 
 ### 6.4. Sec. 13.2 (`.env` cognee-mcp)
@@ -171,8 +171,8 @@ Reemplazar bloque por la versión de la sec. 2.3 de este ADR (Ollama, no Gemini)
 Si tras volver de comer el usuario decide rechazar este ADR:
 
 ```bash
-cd ~/Developer/claude/code-projects/WikiForge
-git reset --hard wf-checkpoint-2026-05-02-1746
+cd ~/Developer/claude/code-projects/Braid
+git reset --hard braid-checkpoint-2026-05-02-1746
 # Restaurar archivos externos según .memory/snapshots/2026-05-02-1746-pre-pivot/STATE.md
 # ADR 0001 vuelve a Accepted; ADR 0002 desaparece.
 ```
@@ -180,5 +180,5 @@ git reset --hard wf-checkpoint-2026-05-02-1746
 ## 8. Trazabilidad
 
 - **Mensaje del usuario que dispara el pivote:** "Me voy a ir a casa, a comer algo. Continúa pudiendo realizar como si fuese una máquina del tiempo... realiza la implementación completa, instalando un modelo local, el que tú me habías recomendado, implementando absolutamente todo."
-- **Tag de snapshot previo:** `wf-checkpoint-2026-05-02-1746` (commit `828824c`).
+- **Tag de snapshot previo:** `braid-checkpoint-2026-05-02-1746` (commit `828824c`).
 - **Recomendación previa del agente:** Ollama + qwen3.5:35b-a3b (opción A del brainstorm original; este ADR la realiza con la mejor aproximación disponible hoy).

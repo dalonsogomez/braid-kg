@@ -64,7 +64,7 @@ Reemplaza el bloque `.env` de la sec. 13.2 del AGENTS.md por:
 ```env
 LLM_PROVIDER=gemini
 LLM_MODEL=gemini/gemini-3-flash-preview
-LLM_API_KEY=<leído desde ~/.config/wikiforge/secrets.env, NUNCA en este archivo>
+LLM_API_KEY=<leído desde ~/.config/braid/secrets.env, NUNCA en este archivo>
 EMBEDDING_PROVIDER=gemini
 EMBEDDING_MODEL=gemini/gemini-embedding-001
 EMBEDDING_DIMENSIONS=3072
@@ -74,10 +74,10 @@ VECTOR_DB_PROVIDER=lancedb
 
 ### 2.4. Gestión de secretos
 
-- La `GEMINI_API_KEY` vive **fuera del repo** en `~/.config/wikiforge/secrets.env` con permisos `600`.
-- `cognee-mcp` la carga vía `--env-file ~/.config/wikiforge/secrets.env` o vía variable de entorno exportada por el shell del usuario.
+- La `GEMINI_API_KEY` vive **fuera del repo** en `~/.config/braid/secrets.env` con permisos `600`.
+- `cognee-mcp` la carga vía `--env-file ~/.config/braid/secrets.env` o vía variable de entorno exportada por el shell del usuario.
 - **Está prohibido**: escribir la key en `.env` del repo, en `AGENTS.md`, en cualquier ADR o plan, en commits, en el wrapper MCP futuro, o en cualquier archivo bajo control de versiones.
-- El `.gitignore` del repo de prueba (`uml-class_diagram`) y de WikiForge incluirá `*.env`, `secrets.env`, `*.secret` por defecto.
+- El `.gitignore` del repo de prueba (`uml-class_diagram`) y de Braid incluirá `*.env`, `secrets.env`, `*.secret` por defecto.
 
 ### 2.5. Autorización de ingesta cloud (sec. 9 anti-patrón #7)
 
@@ -107,7 +107,7 @@ La autorización **no** cubre:
 ### 3.2. Negativas
 
 - **Pérdida de soberanía sobre los datos del repo de prueba.** Cada llamada `cognify`/`codify` envía chunks de código y docs a Google. Mitigación: autorización explícita por repo (sec. 2.5), revisión periódica.
-- **Dependencia de red.** `wikiforge index` falla offline. Mitigación: tabla de síntomas (sec. 4) define umbral para revertir a stack local.
+- **Dependencia de red.** `braid index` falla offline. Mitigación: tabla de síntomas (sec. 4) define umbral para revertir a stack local.
 - **Cuotas y costes potenciales.** Free tier es 15 RPM / 1500 RPD para Flash; si el repo crece o se indexan varios proyectos a la vez, puede saturar. Mitigación: monitorización de cuota en logs JSON; ADR de migración inversa cuando aplique síntoma 11.8.
 - **Política de privacidad de Google puede cambiar.** Mitigación: sec. 4 cubre síntoma 11.10 que dispara reversión.
 - **Free tier de Google AI Studio entrena con tus inputs** (a fecha del ADR; verificar términos antes de aprobar). Si el usuario tiene un proyecto con billing activado, los inputs no se usan para entrenar. **Pregunta abierta** (sec. 6).
@@ -163,9 +163,9 @@ Si cualquier síntoma 11.8 / 11.9 / 11.10 se verifica:
 
 1. `brew install ollama` (M5 Pro, ARM64).
 2. `ollama pull qwen3.5:35b-a3b` y `ollama pull bge-m3` (o `qwen3-embedding-8b` si el síntoma 11.3 también aplica).
-3. Editar `~/.config/wikiforge/secrets.env`: comentar `GEMINI_API_KEY`.
+3. Editar `~/.config/braid/secrets.env`: comentar `GEMINI_API_KEY`.
 4. Editar `cognee-mcp/.env`: revertir a `LLM_PROVIDER=ollama`, `LLM_MODEL=qwen3.5:35b-a3b`, etc.
-5. `wikiforge sync` (cuando exista) o `cognee prune` + reindexar.
+5. `braid sync` (cuando exista) o `cognee prune` + reindexar.
 6. ADR 0002 cerrando la migración inversa con datos del síntoma observado.
 
 El plan de reversión es **siempre ejecutable**: no hay schema lock-in en Cognee porque el grafo y los vectores se reindexan; lo único que cambia es el provider de embeddings y de LLM.
@@ -192,11 +192,11 @@ A partir de la aceptación de este ADR, el plan de Fase 0 puede asumir Gemini 3 
 
 El usuario confirma los siguientes datos para el proyecto que aloja la API key:
 
-- **Nombre:** `WikiForge`
+- **Nombre:** `Braid`
 - **Project number:** `846938751343`
 - **Tipo:** asumido `free tier` mientras el usuario no confirme lo contrario (Q-B respondida como "indiferente"; ver sec. 6).
 
-Estos datos son informativos. La key vive en `~/.config/wikiforge/secrets.env` (chmod 600) y **no aparece en este documento**.
+Estos datos son informativos. La key vive en `~/.config/braid/secrets.env` (chmod 600) y **no aparece en este documento**.
 
 ## 8. Trazabilidad de la conversación que llevó a este ADR
 

@@ -1,6 +1,6 @@
 {
   "timestamp": "2026-05-09T10-20-56Z",
-  "dataset_id": "WikiForge",
+  "dataset_id": "Braid",
   "stack": {
     "llm": "kimi-k2.6:cloud",
     "embedder": "bge-m3",
@@ -125,8 +125,8 @@
   "recall_at_1": 0.4,
   "recall_at_k": 0.7,
   "meta": {
-    "root": "/Users/dalonsogomez/Developer/claude/code-projects/WikiForge",
-    "questions_path": "/Users/dalonsogomez/Developer/claude/code-projects/WikiForge/.memory/eval/questions.json",
+    "root": "/Users/dalonsogomez/Developer/claude/code-projects/Braid",
+    "questions_path": "/Users/dalonsogomez/Developer/claude/code-projects/Braid/.memory/eval/questions.json",
     "search_types": [
       "CHUNKS",
       "SUMMARIES"

@@ -4,7 +4,7 @@
 
 **Goal:** cumplir el criterio de salida de Fase 0 del `AGENTS.md` sec. 10 — *"≥ 4 de 5 preguntas concretas sobre símbolos del repo respondidas correctamente sin abrir archivos"* — para el repositorio de prueba `~/Developer/ai/uml-class_diagram`, vía MCP server `cognee` consumido por Claude Code.
 
-**Architecture:** Cognee 1.x (Direct Mode) corre en un venv dedicado bajo `~/.wikiforge/cognee-mcp/`, configurado para usar Gemini 3 Flash + `gemini-embedding-001` (ADR 0001). El servidor MCP se registra en Claude Code vía `claude mcp add` con transporte stdio. El repo de prueba se inicializa con `git init` + `.kgconfig` + symlinks AGENTS.md según sec. 6 del AGENTS.md canónico. La indexación inicial pasa por `cognee.run_code_graph_pipeline` (codify, tree-sitter Python) + `cognee.cognify` (docs Markdown). Las cinco preguntas de validación se ejecutan invocando las herramientas MCP `cognee_search` desde Claude Code y se comparan contra ground truth conocido del repo.
+**Architecture:** Cognee 1.x (Direct Mode) corre en un venv dedicado bajo `~/.braid/cognee-mcp/`, configurado para usar Gemini 3 Flash + `gemini-embedding-001` (ADR 0001). El servidor MCP se registra en Claude Code vía `claude mcp add` con transporte stdio. El repo de prueba se inicializa con `git init` + `.kgconfig` + symlinks AGENTS.md según sec. 6 del AGENTS.md canónico. La indexación inicial pasa por `cognee.run_code_graph_pipeline` (codify, tree-sitter Python) + `cognee.cognify` (docs Markdown). Las cinco preguntas de validación se ejecutan invocando las herramientas MCP `cognee_search` desde Claude Code y se comparan contra ground truth conocido del repo.
 
 **Tech Stack:** Python 3.13.13 (pyenv-managed), `uv` 0.11.7, Cognee 1.x (LiteLLM debajo), Gemini 3 Flash Preview, `gemini-embedding-001` (3072 dims), networkx (graph backend in-process), LanceDB embebida (vector store), git, Claude Code MCP.
 
@@ -14,9 +14,9 @@
 
 | Path | Acción | Responsabilidad |
 |---|---|---|
-| `~/.wikiforge/cognee-mcp/` | Crear | Workdir dedicado del MCP server. Clon de `topoteretes/cognee` rama estable. |
-| `~/.wikiforge/cognee-mcp/cognee-mcp/.env` | Crear | Config de cognee-mcp (sin secretos; carga vía `~/.config/wikiforge/secrets.env`). |
-| `~/.config/wikiforge/secrets.env` | Ya existe (commit anterior) | Keys (chmod 600), fuera del repo. |
+| `~/.braid/cognee-mcp/` | Crear | Workdir dedicado del MCP server. Clon de `topoteretes/cognee` rama estable. |
+| `~/.braid/cognee-mcp/cognee-mcp/.env` | Crear | Config de cognee-mcp (sin secretos; carga vía `~/.config/braid/secrets.env`). |
+| `~/.config/braid/secrets.env` | Ya existe (commit anterior) | Keys (chmod 600), fuera del repo. |
 | `~/Developer/ai/uml-class_diagram/.gitignore` | Crear | Excluye backups, output, build, `__pycache__`, `*.env`, `.kg/`, `.rag/`. |
 | `~/Developer/ai/uml-class_diagram/.kgconfig` | Crear | TOML según AGENTS.md sec. 13.1 con valores Gemini del ADR 0001. |
 | `~/Developer/ai/uml-class_diagram/AGENTS.md` | Crear | Plantilla AGENTS.md específica del repo de prueba (sec. 13.3 del canónico). |
@@ -26,13 +26,13 @@
 | `~/Developer/ai/uml-class_diagram/.memory/MEMORY.md` | Crear | Índice del repo de prueba. |
 | `~/Developer/ai/uml-class_diagram/.memory/decisions/.gitkeep` | Crear | Carpeta vacía para futuros ADRs del repo de prueba. |
 | `~/Developer/ai/uml-class_diagram/.memory/plans/.gitkeep` | Crear | Carpeta vacía para futuros planes. |
-| `WikiForge/.memory/plans/0001-fase-0-bootstrap.md` | Este archivo | Plan de Fase 0. |
-| `WikiForge/.memory/plans/0001-fase-0-bootstrap-results.md` | Crear (Task 9) | Registro de resultados de las 5 preguntas + decisión pass/fail. |
+| `Braid/.memory/plans/0001-fase-0-bootstrap.md` | Este archivo | Plan de Fase 0. |
+| `Braid/.memory/plans/0001-fase-0-bootstrap-results.md` | Crear (Task 9) | Registro de resultados de las 5 preguntas + decisión pass/fail. |
 
 **Convención de commits:**
-- Cada Task que termine con un cambio en disco hace commit en el repo correspondiente (WikiForge o uml-class_diagram).
+- Cada Task que termine con un cambio en disco hace commit en el repo correspondiente (Braid o uml-class_diagram).
 - Mensajes en inglés (AGENTS.md sec. 8.4).
-- No firmar como Co-Authored-By en el repo de prueba (es código del usuario, no de WikiForge); sí firmar en WikiForge.
+- No firmar como Co-Authored-By en el repo de prueba (es código del usuario, no de Braid); sí firmar en Braid.
 
 ---
 
@@ -77,7 +77,7 @@ Expected: imprime versión sin error. Si falla, abortar y avisar al usuario.
 - [ ] **Step 1.5: Verificar conectividad Gemini API con la key**
 
 ```bash
-source ~/.config/wikiforge/secrets.env
+source ~/.config/braid/secrets.env
 curl -sS -o /tmp/gemini_smoke.json -w "HTTP %{http_code}\n" \
   "https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}" | head -1
 ```
@@ -102,25 +102,25 @@ rm /tmp/gemini_smoke.json
 
 ---
 
-## Task 2: Install cognee-mcp from source under ~/.wikiforge/
+## Task 2: Install cognee-mcp from source under ~/.braid/
 
 **Files:**
-- Create: `~/.wikiforge/cognee-mcp/` (clone target)
+- Create: `~/.braid/cognee-mcp/` (clone target)
 
-**Goal:** instalar Cognee + MCP server en un workdir dedicado, separado del repo WikiForge.
+**Goal:** instalar Cognee + MCP server en un workdir dedicado, separado del repo Braid.
 
-- [ ] **Step 2.1: Crear directorio raíz `~/.wikiforge/`**
+- [ ] **Step 2.1: Crear directorio raíz `~/.braid/`**
 
 ```bash
-mkdir -p ~/.wikiforge && cd ~/.wikiforge && pwd
+mkdir -p ~/.braid && cd ~/.braid && pwd
 ```
 
-Expected: imprime `/Users/dalonsogomez/.wikiforge`.
+Expected: imprime `/Users/dalonsogomez/.braid`.
 
 - [ ] **Step 2.2: Clonar el repo oficial topoteretes/cognee**
 
 ```bash
-cd ~/.wikiforge && git clone --depth 1 https://github.com/topoteretes/cognee.git cognee-mcp
+cd ~/.braid && git clone --depth 1 https://github.com/topoteretes/cognee.git cognee-mcp
 ```
 
 Expected: clon exitoso, `cd cognee-mcp` lleva al repo. Si la rama default ha cambiado el path del MCP server, ajustar steps siguientes.
@@ -128,23 +128,23 @@ Expected: clon exitoso, `cd cognee-mcp` lleva al repo. Si la rama default ha cam
 - [ ] **Step 2.3: Verificar que existe el subdirectorio `cognee-mcp/`**
 
 ```bash
-ls ~/.wikiforge/cognee-mcp/cognee-mcp/pyproject.toml
+ls ~/.braid/cognee-mcp/cognee-mcp/pyproject.toml
 ```
 
-Expected: el archivo existe. Si no existe, el repo upstream cambió la estructura: leer `~/.wikiforge/cognee-mcp/README.md` y ajustar.
+Expected: el archivo existe. Si no existe, el repo upstream cambió la estructura: leer `~/.braid/cognee-mcp/README.md` y ajustar.
 
 - [ ] **Step 2.4: Crear venv e instalar dependencias con uv**
 
 ```bash
-cd ~/.wikiforge/cognee-mcp/cognee-mcp && uv sync --dev --all-extras --reinstall
+cd ~/.braid/cognee-mcp/cognee-mcp && uv sync --dev --all-extras --reinstall
 ```
 
-Expected: termina sin error. Crea `~/.wikiforge/cognee-mcp/cognee-mcp/.venv/`.
+Expected: termina sin error. Crea `~/.braid/cognee-mcp/cognee-mcp/.venv/`.
 
 - [ ] **Step 2.5: Verificar que el binario del server arranca con `--help`**
 
 ```bash
-cd ~/.wikiforge/cognee-mcp/cognee-mcp && uv run python src/server.py --help 2>&1 | head -20
+cd ~/.braid/cognee-mcp/cognee-mcp && uv run python src/server.py --help 2>&1 | head -20
 ```
 
 Expected: imprime ayuda con flags `--transport`, `--host`, `--port`. Si crashea, leer error y abortar para diagnosticar.
@@ -156,15 +156,15 @@ Expected: imprime ayuda con flags `--transport`, `--host`, `--port`. Si crashea,
 ## Task 3: Configure cognee-mcp .env (no secrets in repo)
 
 **Files:**
-- Create: `~/.wikiforge/cognee-mcp/cognee-mcp/.env`
+- Create: `~/.braid/cognee-mcp/cognee-mcp/.env`
 
 **Goal:** configurar Cognee con Gemini sin escribir la API key en disco fuera del secrets file.
 
 - [ ] **Step 3.1: Crear `.env` apuntando a Gemini sin la key**
 
 ```bash
-cat > ~/.wikiforge/cognee-mcp/cognee-mcp/.env <<'EOF'
-# Generado por WikiForge Plan 0001 (Fase 0). Ver ADR 0001 sec. 2.3.
+cat > ~/.braid/cognee-mcp/cognee-mcp/.env <<'EOF'
+# Generado por Braid Plan 0001 (Fase 0). Ver ADR 0001 sec. 2.3.
 LLM_PROVIDER=gemini
 LLM_MODEL=gemini/gemini-3-flash-preview
 EMBEDDING_PROVIDER=gemini
@@ -172,29 +172,29 @@ EMBEDDING_MODEL=gemini/gemini-embedding-001
 EMBEDDING_DIMENSIONS=3072
 GRAPH_DATABASE_PROVIDER=networkx
 VECTOR_DB_PROVIDER=lancedb
-# LLM_API_KEY se lee desde ~/.config/wikiforge/secrets.env vía exportación previa.
+# LLM_API_KEY se lee desde ~/.config/braid/secrets.env vía exportación previa.
 EOF
 ```
 
 - [ ] **Step 3.2: Verificar permisos del secrets.env y que la key está**
 
 ```bash
-ls -la ~/.config/wikiforge/secrets.env && grep -q "^GEMINI_API_KEY=" ~/.config/wikiforge/secrets.env && echo "key present"
+ls -la ~/.config/braid/secrets.env && grep -q "^GEMINI_API_KEY=" ~/.config/braid/secrets.env && echo "key present"
 ```
 
 Expected: archivo `-rw-------` (600), output incluye `key present`. Si no, el ADR 0001 sec. 2.4 fue violado: corregir antes de seguir.
 
-- [ ] **Step 3.3: Crear shim `~/.wikiforge/bin/cognee-mcp-stdio.sh`**
+- [ ] **Step 3.3: Crear shim `~/.braid/bin/cognee-mcp-stdio.sh`**
 
 Necesario porque cognee-mcp espera `LLM_API_KEY` como variable de entorno; el shim mapea `GEMINI_API_KEY` → `LLM_API_KEY` y arranca el server.
 
 ```bash
-mkdir -p ~/.wikiforge/bin
-cat > ~/.wikiforge/bin/cognee-mcp-stdio.sh <<'EOF'
+mkdir -p ~/.braid/bin
+cat > ~/.braid/bin/cognee-mcp-stdio.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-# WikiForge cognee-mcp launcher. ADR 0001 sec. 2.4: API key vive en secrets.env (chmod 600).
-SECRETS="${HOME}/.config/wikiforge/secrets.env"
+# Braid cognee-mcp launcher. ADR 0001 sec. 2.4: API key vive en secrets.env (chmod 600).
+SECRETS="${HOME}/.config/braid/secrets.env"
 if [[ ! -r "${SECRETS}" ]]; then
   echo "FATAL: ${SECRETS} not readable" >&2
   exit 1
@@ -203,16 +203,16 @@ fi
 source "${SECRETS}"
 export LLM_API_KEY="${GEMINI_API_KEY:?GEMINI_API_KEY missing in secrets.env}"
 export EMBEDDING_API_KEY="${GEMINI_API_KEY}"
-cd "${HOME}/.wikiforge/cognee-mcp/cognee-mcp"
+cd "${HOME}/.braid/cognee-mcp/cognee-mcp"
 exec uv run python src/server.py --transport stdio "$@"
 EOF
-chmod +x ~/.wikiforge/bin/cognee-mcp-stdio.sh
+chmod +x ~/.braid/bin/cognee-mcp-stdio.sh
 ```
 
 - [ ] **Step 3.4: Smoke-run del shim (debe quedarse en stdio, esperando input)**
 
 ```bash
-timeout 3 ~/.wikiforge/bin/cognee-mcp-stdio.sh 2>&1 | head -10 || true
+timeout 3 ~/.braid/bin/cognee-mcp-stdio.sh 2>&1 | head -10 || true
 ```
 
 Expected: el server imprime un banner JSON-RPC o se queda silencioso esperando stdin (timeout lo mata limpio). No debe imprimir errores fatales tipo `ImportError`, `KeyError`, `Authentication failed`. Si hay error de auth, revisar Step 3.3 o que la key esté correcta.
@@ -224,14 +224,14 @@ Expected: el server imprime un banner JSON-RPC o se queda silencioso esperando s
 ## Task 4: Smoke-test Gemini via Cognee end-to-end
 
 **Files:**
-- Create: `~/.wikiforge/cognee-mcp/smoke_test.py`
+- Create: `~/.braid/cognee-mcp/smoke_test.py`
 
 **Goal:** verificar que cognee puede invocar Gemini exitosamente con un prompt minúsculo, antes de gastar quota indexando un repo.
 
 - [ ] **Step 4.1: Escribir el script de smoke test**
 
 ```bash
-cat > ~/.wikiforge/cognee-mcp/smoke_test.py <<'EOF'
+cat > ~/.braid/cognee-mcp/smoke_test.py <<'EOF'
 """Phase 0 smoke test: verify Cognee can talk to Gemini and return a result."""
 import asyncio
 import os
@@ -239,7 +239,7 @@ import sys
 from pathlib import Path
 
 # Load secrets
-secrets = Path.home() / ".config/wikiforge/secrets.env"
+secrets = Path.home() / ".config/braid/secrets.env"
 if not secrets.is_file():
     sys.exit(f"FATAL: {secrets} missing")
 for line in secrets.read_text().splitlines():
@@ -260,11 +260,11 @@ import cognee  # noqa: E402
 async def main() -> int:
     await cognee.prune.prune_data()
     await cognee.prune.prune_system(metadata=True)
-    await cognee.add("Phase 0 of WikiForge swaps Ollama for Gemini per ADR 0001.")
+    await cognee.add("Phase 0 of Braid swaps Ollama for Gemini per ADR 0001.")
     await cognee.cognify()
     results = await cognee.search(
         query_type=cognee.SearchType.SUMMARIES,
-        query_text="What does Phase 0 of WikiForge do?",
+        query_text="What does Phase 0 of Braid do?",
     )
     print("RESULTS:", results)
     if not results:
@@ -279,15 +279,15 @@ EOF
 - [ ] **Step 4.2: Ejecutar smoke test**
 
 ```bash
-cd ~/.wikiforge/cognee-mcp/cognee-mcp && uv run python ../smoke_test.py
+cd ~/.braid/cognee-mcp/cognee-mcp && uv run python ../smoke_test.py
 ```
 
-Expected: termina con exit code 0 y la línea `RESULTS:` contiene una respuesta no vacía sobre Phase 0 / WikiForge / ADR 0001. Si falla con `Authentication failed`, revisar key. Si falla con `model not found`, ese ID no está disponible: caer al fallback `gemini-2.5-flash`, registrar en `bootstrap-results.md` como addendum al ADR 0001.
+Expected: termina con exit code 0 y la línea `RESULTS:` contiene una respuesta no vacía sobre Phase 0 / Braid / ADR 0001. Si falla con `Authentication failed`, revisar key. Si falla con `model not found`, ese ID no está disponible: caer al fallback `gemini-2.5-flash`, registrar en `bootstrap-results.md` como addendum al ADR 0001.
 
 - [ ] **Step 4.3: Limpieza**
 
 ```bash
-rm ~/.wikiforge/cognee-mcp/smoke_test.py
+rm ~/.braid/cognee-mcp/smoke_test.py
 ```
 
 - [ ] **Step 4.4: Sin commit (verificación local).**
@@ -370,7 +370,7 @@ EOF
 
 ```bash
 cat > ~/Developer/ai/uml-class_diagram/.kgconfig <<'EOF'
-# WikiForge .kgconfig (AGENTS.md sec. 13.1 + ADR 0001 stack Gemini)
+# Braid .kgconfig (AGENTS.md sec. 13.1 + ADR 0001 stack Gemini)
 dataset_id = "vp-class-diagram-agent"
 graph_backend = "networkx"
 vector_backend = "lancedb"
@@ -413,8 +413,8 @@ Diagrams from local course PDFs, solved examples, and a structured
 ## Memoria del proyecto
 - Contexto extendido en `.memory/MEMORY.md` y `.memory/decisions/`.
 - Knowledge graph disponible vía MCP server `cognee` con `dataset_id=vp-class-diagram-agent`.
-- Para promover una decisión: `wikiforge promote-decision "..."` (CLI Fase 1, aún no instalado).
-- El sistema sigue las reglas del `AGENTS.md` canónico de WikiForge (`~/Developer/claude/code-projects/WikiForge/AGENTS.md`).
+- Para promover una decisión: `braid promote-decision "..."` (CLI Fase 1, aún no instalado).
+- El sistema sigue las reglas del `AGENTS.md` canónico de Braid (`~/Developer/claude/code-projects/Braid/AGENTS.md`).
 EOF
 ```
 
@@ -443,7 +443,7 @@ cat > .memory/MEMORY.md <<'EOF'
 
 ## Decisiones (ADRs)
 
-(vacío — añadir con `wikiforge promote-decision` cuando exista CLI)
+(vacío — añadir con `braid promote-decision` cuando exista CLI)
 
 ## Planes activos
 
@@ -451,7 +451,7 @@ cat > .memory/MEMORY.md <<'EOF'
 
 ## Convenciones
 
-- AGENTS.md canónico de WikiForge gobierna; este `AGENTS.md` solo lista convenciones de este repo.
+- AGENTS.md canónico de Braid gobierna; este `AGENTS.md` solo lista convenciones de este repo.
 - Indexado en knowledge graph Cognee vía `dataset_id=vp-class-diagram-agent`.
 EOF
 ```
@@ -461,7 +461,7 @@ EOF
 ```bash
 cd ~/Developer/ai/uml-class_diagram
 git add .gitignore .kgconfig AGENTS.md CLAUDE.md .github/ .cursor/ .memory/
-git commit -m "chore: bootstrap WikiForge governance for Phase 0 test repo
+git commit -m "chore: bootstrap Braid governance for Phase 0 test repo
 
 - AGENTS.md per-project (sec. 13.3 of canonical AGENTS.md)
 - CLAUDE.md / copilot / cursor symlinks to AGENTS.md
@@ -482,7 +482,7 @@ Si `git status` muestra archivos pendientes (todo el código actual), continuar:
 
 ```bash
 git add -A
-git commit -m "chore: import existing project tree as baseline (pre-WikiForge work)"
+git commit -m "chore: import existing project tree as baseline (pre-Braid work)"
 ```
 
 Expected: commit incluye `src/`, `tests/`, `plugin/`, `docs/`, `README.md`, `pyproject.toml`, etc. Los `_backup_*` y `output/` quedan fuera por `.gitignore`.
@@ -492,7 +492,7 @@ Expected: commit incluye `src/`, `tests/`, `plugin/`, `docs/`, `README.md`, `pyp
 ## Task 6: Index uml-class_diagram with cognee
 
 **Files:**
-- Create: `~/.wikiforge/cognee-mcp/index_phase0.py` (script de indexación one-shot)
+- Create: `~/.braid/cognee-mcp/index_phase0.py` (script de indexación one-shot)
 - Create: `~/Developer/ai/uml-class_diagram/.kg/`, `.rag/` (artefactos de cognee)
 
 **Goal:** ejecutar `cognee.run_code_graph_pipeline` (codify) sobre `src/` + `tests/`, y `cognee.cognify` sobre los Markdown del repo.
@@ -500,7 +500,7 @@ Expected: commit incluye `src/`, `tests/`, `plugin/`, `docs/`, `README.md`, `pyp
 - [ ] **Step 6.1: Escribir el script de indexación**
 
 ```bash
-cat > ~/.wikiforge/cognee-mcp/index_phase0.py <<'EOF'
+cat > ~/.braid/cognee-mcp/index_phase0.py <<'EOF'
 """Phase 0 indexer: build code graph + doc embeddings for vp-class-diagram-agent."""
 import asyncio
 import os
@@ -508,7 +508,7 @@ import sys
 from pathlib import Path
 
 # Load secrets and config (same shim as smoke test)
-secrets = Path.home() / ".config/wikiforge/secrets.env"
+secrets = Path.home() / ".config/braid/secrets.env"
 for line in secrets.read_text().splitlines():
     line = line.strip()
     if line and not line.startswith("#") and "=" in line:
@@ -570,7 +570,7 @@ EOF
 - [ ] **Step 6.2: Ejecutar indexación**
 
 ```bash
-cd ~/.wikiforge/cognee-mcp/cognee-mcp && time uv run python ../index_phase0.py 2>&1 | tee /tmp/phase0_index.log
+cd ~/.braid/cognee-mcp/cognee-mcp && time uv run python ../index_phase0.py 2>&1 | tee /tmp/phase0_index.log
 ```
 
 Expected: termina con exit 0, tiempo total < 10 minutos para 27 archivos py + ~35 docs Markdown. La salida incluye `sanity result count: N` con `N ≥ 1`. Si falla con `429`/quota, esperar la ventana e intentar de nuevo. Si falla con `model not found`, aplicar fallback `gemini-2.5-flash` en `.env` y `index_phase0.py` y reintentar.
@@ -609,7 +609,7 @@ print(f"[graph-check] total nodes: {g.number_of_nodes()}")
 for t, n in types.most_common(20):
     print(f"  {t}: {n}")
 EOF
-uv run --project ~/.wikiforge/cognee-mcp/cognee-mcp python /tmp/phase0_graph_check.py
+uv run --project ~/.braid/cognee-mcp/cognee-mcp python /tmp/phase0_graph_check.py
 rm /tmp/phase0_graph_check.py
 ```
 
@@ -636,7 +636,7 @@ Expected: `cognee not registered yet`. Si ya estuviera, hacer `claude mcp remove
 - [ ] **Step 7.2: Registrar cognee como MCP server stdio**
 
 ```bash
-claude mcp add --scope user --transport stdio cognee /Users/dalonsogomez/.wikiforge/bin/cognee-mcp-stdio.sh
+claude mcp add --scope user --transport stdio cognee /Users/dalonsogomez/.braid/bin/cognee-mcp-stdio.sh
 ```
 
 Expected: imprime confirmación de registro. Sin error.
@@ -656,14 +656,14 @@ Expected: línea con `cognee: ... ✓ Connected`. Si dice `✗`, ejecutar `claud
 ## Task 8: Define the 5 validation questions
 
 **Files:**
-- Create: `~/Developer/claude/code-projects/WikiForge/.memory/plans/0001-fase-0-bootstrap-questions.md`
+- Create: `~/Developer/claude/code-projects/Braid/.memory/plans/0001-fase-0-bootstrap-questions.md`
 
 **Goal:** fijar las 5 preguntas con su ground truth ANTES de invocar el MCP, para evitar mover el poste de la portería.
 
 - [ ] **Step 8.1: Escribir el archivo de preguntas con ground truth**
 
 ```bash
-cat > ~/Developer/claude/code-projects/WikiForge/.memory/plans/0001-fase-0-bootstrap-questions.md <<'EOF'
+cat > ~/Developer/claude/code-projects/Braid/.memory/plans/0001-fase-0-bootstrap-questions.md <<'EOF'
 # Fase 0 — 5 preguntas de validación
 
 > Plan 0001, criterio de salida AGENTS.md sec. 10: ≥ 4 / 5 correctas sin abrir archivos.
@@ -731,10 +731,10 @@ cd ~/Developer/ai/uml-class_diagram && grep -rE "audit_exam_associations\(" src/
 
 Si el callsite real difiere de lo que dice `0001-fase-0-bootstrap-questions.md` Q2, **editar el archivo de preguntas para reflejar la realidad** antes de Task 9. No mover el poste de la portería tras ver respuestas.
 
-- [ ] **Step 8.3: Commit en WikiForge**
+- [ ] **Step 8.3: Commit en Braid**
 
 ```bash
-cd ~/Developer/claude/code-projects/WikiForge
+cd ~/Developer/claude/code-projects/Braid
 git add .memory/plans/0001-fase-0-bootstrap-questions.md
 git commit -m "docs: define Phase 0 validation questions with ground truth
 
@@ -750,7 +750,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ## Task 9: Run validation questions and score
 
 **Files:**
-- Create: `~/Developer/claude/code-projects/WikiForge/.memory/plans/0001-fase-0-bootstrap-results.md`
+- Create: `~/Developer/claude/code-projects/Braid/.memory/plans/0001-fase-0-bootstrap-results.md`
 
 **Goal:** ejecutar las 5 preguntas vía Claude Code → MCP `cognee` → grafo, y registrar puntuación.
 
@@ -775,7 +775,7 @@ Para cada pregunta, recoger:
 - [ ] **Step 9.3: Crear el archivo de resultados**
 
 ```bash
-cat > ~/Developer/claude/code-projects/WikiForge/.memory/plans/0001-fase-0-bootstrap-results.md <<'EOF'
+cat > ~/Developer/claude/code-projects/Braid/.memory/plans/0001-fase-0-bootstrap-results.md <<'EOF'
 # Fase 0 — Resultados de validación
 
 **Fecha de ejecución:** YYYY-MM-DD
@@ -819,7 +819,7 @@ cat > ~/Developer/claude/code-projects/WikiForge/.memory/plans/0001-fase-0-boots
 
 ## Próximas decisiones
 
-- Si PASS: cerrar Fase 0, abrir Fase 1 (CLI `wikiforge`, wrapper de tres niveles, perfil global).
+- Si PASS: cerrar Fase 0, abrir Fase 1 (CLI `braid`, wrapper de tres niveles, perfil global).
 - Si FAIL: análisis de modo de fallo, posible reindex con `gemini-3.1-pro-preview` en lugar de Flash, o addendum al ADR 0001.
 EOF
 ```
@@ -835,7 +835,7 @@ Sumar las 5 puntuaciones, escribir el total, y marcar PASS o FAIL.
 - [ ] **Step 9.6: Commit**
 
 ```bash
-cd ~/Developer/claude/code-projects/WikiForge
+cd ~/Developer/claude/code-projects/Braid
 git add .memory/plans/0001-fase-0-bootstrap-results.md
 git commit -m "docs: record Phase 0 validation results
 
@@ -849,7 +849,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ## Task 10: Update MEMORY.md and commit Phase 0 closure
 
 **Files:**
-- Modify: `~/Developer/claude/code-projects/WikiForge/.memory/MEMORY.md`
+- Modify: `~/Developer/claude/code-projects/Braid/.memory/MEMORY.md`
 
 **Goal:** dejar trazabilidad y enlaces correctos del cierre de Fase 0.
 
@@ -870,13 +870,13 @@ Editar `MEMORY.md` para que la sección "Planes activos" apunte al estado real:
 Añadir bajo "Estado del repositorio":
 
 ```markdown
-- Fase 0 cerrada con score <X.Y/5.0>. Próxima fase: Fase 1 (CLI `wikiforge`, wrapper MCP de tres niveles, perfil global).
+- Fase 0 cerrada con score <X.Y/5.0>. Próxima fase: Fase 1 (CLI `braid`, wrapper MCP de tres niveles, perfil global).
 ```
 
 - [ ] **Step 10.3: Commit**
 
 ```bash
-cd ~/Developer/claude/code-projects/WikiForge
+cd ~/Developer/claude/code-projects/Braid
 git add .memory/MEMORY.md
 git commit -m "docs: close Phase 0 in MEMORY.md, link plan + questions + results
 
@@ -898,7 +898,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - ADR 0001 sec. 2.5 (autorización privacidad por repo): contemplada en Task 5 (solo `uml-class_diagram` indexado).
 - AGENTS.md sec. 8.4 (idioma): commits en inglés, contenido funcional en español, OK.
 
-**Fuera de scope explícito (Fase 1+):** wrapper MCP de tres niveles (sec. 4.3), CLI `wikiforge`, perfil global `~/.wikiforge/profile/AGENTS.md`, suite `wikiforge eval`.
+**Fuera de scope explícito (Fase 1+):** wrapper MCP de tres niveles (sec. 4.3), CLI `braid`, perfil global `~/.braid/profile/AGENTS.md`, suite `braid eval`.
 
 ### 2. Placeholder scan
 
@@ -910,7 +910,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - `dataset_id = "vp-class-diagram-agent"` aparece consistentemente en .kgconfig, AGENTS.md per-project, index_phase0.py, MEMORY.md.
 - Modelo `gemini-3-flash-preview` consistente en `.env`, shim, smoke test, index_phase0.py, kgconfig, ADR 0001.
-- Path `~/.wikiforge/cognee-mcp/cognee-mcp/` (doble `cognee-mcp` por el subdirectorio del repo upstream) consistente en Tasks 2, 3, 4, 6.
+- Path `~/.braid/cognee-mcp/cognee-mcp/` (doble `cognee-mcp` por el subdirectorio del repo upstream) consistente en Tasks 2, 3, 4, 6.
 
 ### 4. Riesgos no cubiertos por el plan
 

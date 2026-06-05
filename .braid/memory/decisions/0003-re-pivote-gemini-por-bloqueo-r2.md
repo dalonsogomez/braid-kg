@@ -64,7 +64,7 @@ VECTOR_DB_PROVIDER=lancedb
 ENABLE_BACKEND_ACCESS_CONTROL=false
 ```
 
-**Shim `~/.wikiforge/bin/cognee-mcp-stdio.sh`:** revertido al patrón del ADR 0001 sec. 2.4 (lee `GEMINI_API_KEY` desde `~/.config/wikiforge/secrets.env`).
+**Shim `~/.braid/bin/cognee-mcp-stdio.sh`:** revertido al patrón del ADR 0001 sec. 2.4 (lee `GEMINI_API_KEY` desde `~/.config/braid/secrets.env`).
 
 ### 2.3. Privacidad
 
@@ -72,7 +72,7 @@ Vuelve a aplicar la autorización del ADR 0001 sec. 6 (Q-A respondida sí: archi
 
 ### 2.4. Estado de los ADRs anteriores
 
-- **ADR 0001 (Gemini):** vuelve a `Active` parcialmente. Las modificaciones al AGENTS.md de la sec. 6 del ADR 0001 (filas de stack) se reaplican, pero las síntomas 11.8/11.9/11.10 introducidas por ADR 0001 permanecen colapsadas en el síntoma único 11.8 que ADR 0002 dejó (calidad insuficiente del LLM medida en `wikiforge eval`).
+- **ADR 0001 (Gemini):** vuelve a `Active` parcialmente. Las modificaciones al AGENTS.md de la sec. 6 del ADR 0001 (filas de stack) se reaplican, pero las síntomas 11.8/11.9/11.10 introducidas por ADR 0001 permanecen colapsadas en el síntoma único 11.8 que ADR 0002 dejó (calidad insuficiente del LLM medida en `braid eval`).
 - **ADR 0002 (Local + kuzu):** queda como `Superseded en su parte LLM/embeddings`. La parte de **Kuzu como graph backend (sec. 5 del ADR 0002) sigue vigente** y es la que evita reabrir el blocker de Cognee 1.0 sin networkx.
 - **ADR 0003:** Active. Es el ADR vigente que define el stack actual.
 
@@ -80,7 +80,7 @@ Vuelve a aplicar la autorización del ADR 0001 sec. 6 (Q-A respondida sí: archi
 
 Cuando el usuario regrese y revise:
 
-1. **Snapshot disponible:** tag `wf-checkpoint-2026-05-02-1746` (commit `828824c`) — punto previo al primer pivote.
+1. **Snapshot disponible:** tag `braid-checkpoint-2026-05-02-1746` (commit `828824c`) — punto previo al primer pivote.
 2. **Tres ADRs apilados:**
    - 0001 (Gemini, propuesto y reactivado por 0003).
    - 0002 (Local, Superseded en LLM/embeddings; mantiene kuzu).

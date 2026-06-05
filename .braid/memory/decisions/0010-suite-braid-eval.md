@@ -1,16 +1,16 @@
-# ADR 0010 — Suite `wikiforge eval` (entregable formal Fase 2)
+# ADR 0010 — Suite `braid eval` (entregable formal Fase 2)
 
 - **Estado:** Active
 - **Fecha:** 2026-05-09
 - **Decisor:** Daniel Alonso Gómez
 - **Tags:** eval,fase-2,quality-gate,baseline
-- **Origen:** sec. 10 Fase 2 AGENTS.md exige *"suite `wikiforge eval` con 10-20 preguntas por repo activo, baseline de calidad medido y registrado"*. Esta entrega convierte el stub `wikiforge eval` en un comando operativo.
+- **Origen:** sec. 10 Fase 2 AGENTS.md exige *"suite `braid eval` con 10-20 preguntas por repo activo, baseline de calidad medido y registrado"*. Esta entrega convierte el stub `braid eval` en un comando operativo.
 
 ---
 
 ## Contexto
 
-Fase 0 cerró con `validate_phase0.py` ad-hoc (PASS 4/5). Esa pieza es local al repo de prueba y no es portable a cualquier repo gobernado por WikiForge. La sec. 7 de AGENTS.md prevé un `wikiforge eval` canónico para que cualquier repo pueda medir grounding y alucinación con un único comando.
+Fase 0 cerró con `validate_phase0.py` ad-hoc (PASS 4/5). Esa pieza es local al repo de prueba y no es portable a cualquier repo gobernado por Braid. La sec. 7 de AGENTS.md prevé un `braid eval` canónico para que cualquier repo pueda medir grounding y alucinación con un único comando.
 
 Sin un eval estandarizado:
 
@@ -20,7 +20,7 @@ Sin un eval estandarizado:
 
 ## Decisión
 
-Se introduce el comando `wikiforge eval` con la siguiente arquitectura, gobernada por *"el corpus de preguntas vive en el repo, las respuestas vivien en el grafo, el scoring es declarativo en JSON"*:
+Se introduce el comando `braid eval` con la siguiente arquitectura, gobernada por *"el corpus de preguntas vive en el repo, las respuestas vivien en el grafo, el scoring es declarativo en JSON"*:
 
 ### 1. Layout
 
@@ -36,7 +36,7 @@ Se introduce el comando `wikiforge eval` con la siguiente arquitectura, gobernad
 ```json
 {
   "version": 1,
-  "dataset_id": "WikiForge",
+  "dataset_id": "Braid",
   "scoring": {
     "match": "substring",
     "search_types": ["CHUNKS", "SUMMARIES"],
@@ -47,13 +47,13 @@ Se introduce el comando `wikiforge eval` con la siguiente arquitectura, gobernad
     {
       "id": "Q01",
       "kind": "CONTAINS",
-      "query": "¿Qué hace el comando 'wikiforge claude-session-start'?",
+      "query": "¿Qué hace el comando 'braid claude-session-start'?",
       "expected_any_of": [
         "claude.py",
         "claude-session-start",
         "ADR 0009"
       ],
-      "expected_top_1": ["src/wikiforge/commands/claude.py"],
+      "expected_top_1": ["src/braid/commands/claude.py"],
       "notes": "Q sobre símbolo nuevo del CLI."
     }
   ]
@@ -70,7 +70,7 @@ Se introduce el comando `wikiforge eval` con la siguiente arquitectura, gobernad
 ### 3. Ejecución
 
 ```bash
-wikiforge eval [--questions FILE] [--top-k N] [--no-save]
+braid eval [--questions FILE] [--top-k N] [--no-save]
 ```
 
 - Lee `questions.json` (default `.memory/eval/questions.json`).
@@ -86,14 +86,14 @@ wikiforge eval [--questions FILE] [--top-k N] [--no-save]
 ```json
 {
   "timestamp": "2026-05-09T...",
-  "dataset_id": "WikiForge",
+  "dataset_id": "Braid",
   "stack": { "llm": "kimi-k2.6:cloud", "embedder": "bge-m3", ... },
   "questions": [
     {
       "id": "Q01",
       "score": 1.0,
       "rationale": "expected_any_of matched: claude.py (top-1)",
-      "top_1_path": "[FILE kind=code path=src/wikiforge/commands/claude.py]",
+      "top_1_path": "[FILE kind=code path=src/braid/commands/claude.py]",
       "search_results_count": { "CHUNKS": 5, "SUMMARIES": 5 }
     }
   ],
@@ -109,7 +109,7 @@ wikiforge eval [--questions FILE] [--top-k N] [--no-save]
 
 > *"baseline de calidad medido y registrado"*
 
-Se cumple ejecutando `wikiforge eval` una vez tras la implementación, comprometiendo el primer run en `.memory/eval/runs/baseline.json` (o tag relacionado).
+Se cumple ejecutando `braid eval` una vez tras la implementación, comprometiendo el primer run en `.memory/eval/runs/baseline.json` (o tag relacionado).
 
 ## Alternativas consideradas
 
@@ -124,38 +124,38 @@ Se cumple ejecutando `wikiforge eval` una vez tras la implementación, compromet
 
 ### Positivas
 
-- Cualquier repo gobernado por WikiForge puede medir su calidad RAG con un comando.
-- Cada commit puede correr `wikiforge eval` como CI gate (futuro — esta ADR no lo activa).
-- Los síntomas sec. 11.4 (reranker) y sec. 11.10 (calidad insuficiente) ahora son verificables con `wikiforge eval`, no estimación.
+- Cualquier repo gobernado por Braid puede medir su calidad RAG con un comando.
+- Cada commit puede correr `braid eval` como CI gate (futuro — esta ADR no lo activa).
+- Los síntomas sec. 11.4 (reranker) y sec. 11.10 (calidad insuficiente) ahora son verificables con `braid eval`, no estimación.
 
 ### Negativas
 
 - Las preguntas requieren mantenimiento — si el repo evoluciona y cambian paths, hay que actualizar `expected_*`.
-- Substring matching es laxo (puede pasar por casualidad). Mitigación: combinaciones de substrings específicas (p.ej. `"src/wikiforge/commands/claude.py"` es más estricto que `"claude"`).
+- Substring matching es laxo (puede pasar por casualidad). Mitigación: combinaciones de substrings específicas (p.ej. `"src/braid/commands/claude.py"` es más estricto que `"claude"`).
 
 ### Neutras
 
-- El comando `wikiforge eval` deja de ser stub; el contrato de sec. 7 AGENTS.md se cumple.
-- `~/.wikiforge/profile/` no requiere cambios.
+- El comando `braid eval` deja de ser stub; el contrato de sec. 7 AGENTS.md se cumple.
+- `~/.braid/profile/` no requiere cambios.
 
 ## Verificación
 
-1. `wikiforge eval --help` muestra opciones.
+1. `braid eval --help` muestra opciones.
 2. Ejecución con `questions.json` válido: imprime tabla por pregunta + JSON con `total/max/pct/recall_at_1/recall_at_k`.
 3. Run guardado en `.memory/eval/runs/` con timestamp ISO.
 4. Run con `--no-save` no escribe filesystem.
-5. Run con `questions.json` ausente: error mensaje útil indicando `wikiforge init` o ruta esperada.
+5. Run con `questions.json` ausente: error mensaje útil indicando `braid init` o ruta esperada.
 
 ## Migración / rollback
 
-- Trivial: si `wikiforge eval` regresa, sustituir el archivo `commands/eval.py` por el stub original.
+- Trivial: si `braid eval` regresa, sustituir el archivo `commands/eval.py` por el stub original.
 - Las preguntas son data, no código — versionables como cualquier ADR.
 
 ## Referencias
 
 - AGENTS.md sec. 7 (CLI canónico — esta ADR convierte stub en comando real).
 - AGENTS.md sec. 10 Fase 2 (criterio de salida).
-- AGENTS.md sec. 11.4 (síntoma reranker — `wikiforge eval` lo verifica numéricamente).
+- AGENTS.md sec. 11.4 (síntoma reranker — `braid eval` lo verifica numéricamente).
 - AGENTS.md sec. 11.10 (síntoma calidad LLM insuficiente — idem).
 - ADR 0009 (auto-bootstrap RAG — `eval` se ejecuta sobre el dataset poblado por `index/sync`).
 - Plan 0001-fase-0-bootstrap-questions.md (5 preguntas Fase 0; `eval` generaliza ese patrón).

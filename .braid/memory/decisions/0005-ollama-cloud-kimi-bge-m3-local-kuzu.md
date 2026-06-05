@@ -123,7 +123,7 @@ Reemplazar bloque por la versión de la sec. 2.2 de este ADR.
 
 ### 5.3. Sec. 11
 
-Eliminar el síntoma 11.8 colapsado por ADR 0002 (era de "calidad insuficiente del LLM medida en wikiforge eval"). Reemplazar por:
+Eliminar el síntoma 11.8 colapsado por ADR 0002 (era de "calidad insuficiente del LLM medida en braid eval"). Reemplazar por:
 
 ```diff
 +| 11.8 | Ollama Cloud caído > 1 vez por semana o latencia > 5s p50 | Reversión a `qwen3:30b` local | `ollama pull qwen3:30b` + cambiar LLM_MODEL en .env |

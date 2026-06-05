@@ -86,12 +86,12 @@ Modos consultados: `CHUNKS` y `SUMMARIES`. No se usa `GRAPH_COMPLETION` para sco
 - ✅ Cognee 1.0 instalado y funcional (`uv run python ../index_phase0.py` E2E sin errores).
 - ✅ Stack ADR 0005 funcional: kimi-k2.6:cloud + bge-m3 + Kuzu + LanceDB.
 - ✅ KG Kuzu poblado: ~30 archivos indexados (27 .py + README + MEMORY + plugin manifest), >250 chunks con embeddings 1024-dim.
-- ✅ `~/.wikiforge/bin/cognee-mcp-stdio.sh` funcional.
+- ✅ `~/.braid/bin/cognee-mcp-stdio.sh` funcional.
 - ✅ `~/Developer/ai/uml-class_diagram` con `git`, `.kgconfig`, `AGENTS.md`, symlinks, `.memory/`.
 - ✅ Cinco ADRs documentando todas las decisiones del bootstrap.
-- ✅ Snapshot `wf-checkpoint-2026-05-02-1746` (commit 828824c).
-- ✅ Tag `wf-fase-0-blocked-by-gemini-quota-2026-05-02` (cierre del día 1).
-- 🎯 Tag `wf-fase-0-completed-2026-05-03` (este cierre).
+- ✅ Snapshot `braid-checkpoint-2026-05-02-1746` (commit 828824c).
+- ✅ Tag `braid-fase-0-blocked-by-gemini-quota-2026-05-02` (cierre del día 1).
+- 🎯 Tag `braid-fase-0-completed-2026-05-03` (este cierre).
 
 ## Mejoras intentadas post-PASS (2026-05-03)
 

@@ -101,7 +101,7 @@ Esto se añade como nuevo síntoma 11.11 en `AGENTS.md` sec. 11 vía esta misma 
 ### 3.2. Negativas
 
 - **Pareja de hacks frágil.** Tres workarounds simultáneos contra bugs upstream. Si Cognee/LiteLLM/Ollama refactorizan cualquiera de los tres codepaths, el `.env` puede romperse en silencio.
-- **Mitigación:** suite `wikiforge eval` (Fase 2) detectará la regresión cuando se introduzca. Hasta entonces, las preguntas de validación de Fase 0 sirven como smoke test manual.
+- **Mitigación:** suite `braid eval` (Fase 2) detectará la regresión cuando se introduzca. Hasta entonces, las preguntas de validación de Fase 0 sirven como smoke test manual.
 
 ### 3.3. Cuándo este ADR queda obsoleto
 
@@ -114,4 +114,4 @@ Si cualquiera de los tres se resuelve upstream, abrir ADR 0007 simplificando el 
 ## 4. Trazabilidad
 
 - **Bootstrap del 2026-05-03**: sesión Claude Code completó Fase 0 con score 4.0/5.0 usando exactamente este `.env`. Ver `.memory/plans/0001-fase-0-bootstrap-results.md` y commit `5d65d24`.
-- **Tag de cierre:** `wf-fase-0-completed-2026-05-03`.
+- **Tag de cierre:** `braid-fase-0-completed-2026-05-03`.

@@ -49,7 +49,6 @@ projects/
 # Local databases and generated binaries
 *.db
 /braid
-/wikiforge
 
 # Logs
 *.log

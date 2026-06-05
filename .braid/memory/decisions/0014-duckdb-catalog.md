@@ -4,7 +4,7 @@
 - **Fecha:** 2026-05-10
 - **Decisor:** Daniel Alonso Gómez
 - **Tags:** (ninguno)
-- **Origen:** promoción manual sesión → proyecto vía `wikiforge promote-decision`
+- **Origen:** promoción manual sesión → proyecto vía `braid promote-decision`
 
 ---
 

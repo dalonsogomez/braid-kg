@@ -1,21 +1,21 @@
-# Plan 0005 — Suite `wikiforge eval` + baseline Fase 2
+# Plan 0005 — Suite `braid eval` + baseline Fase 2
 
 - **Fecha de inicio:** 2026-05-09
 - **Status:** In progress
-- **ADR de referencia:** [0010](../decisions/0010-suite-wikiforge-eval.md)
+- **ADR de referencia:** [0010](../decisions/0010-suite-braid-eval.md)
 - **Fase:** 2 (entregable formal — sec. 10 Fase 2)
 
 ## Objetivo
 
-Reemplazar el stub `wikiforge eval` por un comando operativo que ejecute una suite de 10 preguntas reales del repo WikiForge contra el dataset cognee y registre el baseline en `.memory/eval/runs/`. Cumplir el criterio de salida de Fase 2: *"baseline de calidad medido y registrado"*.
+Reemplazar el stub `braid eval` por un comando operativo que ejecute una suite de 10 preguntas reales del repo Braid contra el dataset cognee y registre el baseline en `.memory/eval/runs/`. Cumplir el criterio de salida de Fase 2: *"baseline de calidad medido y registrado"*.
 
 ## Tareas
 
 ### 1. ADR 0010 ✅
-Escrito en `.memory/decisions/0010-suite-wikiforge-eval.md`.
+Escrito en `.memory/decisions/0010-suite-braid-eval.md`.
 
 ### 2. Implementar `commands/eval.py`
-**Archivo nuevo:** `src/wikiforge/commands/eval.py`.
+**Archivo nuevo:** `src/braid/commands/eval.py`.
 **CLI:** `cli.py` reemplaza el stub `eval` por la nueva implementación.
 **Dependencies:** ninguna nueva (usa `runner.run_search` + filesystem).
 
@@ -31,7 +31,7 @@ Escrito en `.memory/decisions/0010-suite-wikiforge-eval.md`.
 6. Imprime tabla por pregunta + totales.
 7. Guarda run en `.memory/eval/runs/<ISO>.json` (a menos que `--no-save`).
 
-### 3. Crear `.memory/eval/questions.json` (10 preguntas WikiForge)
+### 3. Crear `.memory/eval/questions.json` (10 preguntas Braid)
 Cobertura por tipo de relación AGENTS.md sec. 5.3:
 - 3 preguntas CONTAINS / símbolos del CLI (claude.py, runner.py, paths.py)
 - 2 preguntas DOCUMENTS / ADRs (0009 auto-bootstrap, 0006 LiteLLM dodge)
@@ -39,11 +39,11 @@ Cobertura por tipo de relación AGENTS.md sec. 5.3:
 - 2 preguntas MENTIONS / convenciones AGENTS.md (sec. 9.7 privacidad, sec. 4.3 resolución contexto)
 - 1 pregunta CALLS / IMPORTS (qué archivo invoca `find_git_root` desde fuera de `paths.py`)
 
-### 4. Reindex completo del repo WikiForge
-Ejecutar `wikiforge index --rebuild` (en background, ~15 min) para tener el dataset con TODOS los ADRs (0001-0010) + planes (0001-0005) + código actual + AGENTS.md actualizado.
+### 4. Reindex completo del repo Braid
+Ejecutar `braid index --rebuild` (en background, ~15 min) para tener el dataset con TODOS los ADRs (0001-0010) + planes (0001-0005) + código actual + AGENTS.md actualizado.
 
-### 5. Ejecutar `wikiforge eval` (baseline)
-Tras reindex: ejecutar `wikiforge eval` y registrar el run. Copiar a `.memory/eval/runs/baseline-fase-2-<fecha>.json` para que sea persistente y comparable después de Fase 2.
+### 5. Ejecutar `braid eval` (baseline)
+Tras reindex: ejecutar `braid eval` y registrar el run. Copiar a `.memory/eval/runs/baseline-fase-2-<fecha>.json` para que sea persistente y comparable después de Fase 2.
 
 ### 6. Decisión sobre reranker (síntoma 11.4)
 - Si total ≥ 7.0 / 10 y recall@1 ≥ 0.5 → reranker entra en backlog Fase 3.
@@ -54,14 +54,14 @@ Tras reindex: ejecutar `wikiforge eval` y registrar el run. Copiar a `.memory/ev
 - Code quality reviewer: ¿el código es limpio, tiene errores edge, etc.?
 
 ### 8. Cierre
-- Update plan 0003: TODO #4 (`wikiforge eval`) marcado como ✅ resuelto. TODO #3 (reranker) marcado como ✅ o ⏳ según decisión paso 6.
+- Update plan 0003: TODO #4 (`braid eval`) marcado como ✅ resuelto. TODO #3 (reranker) marcado como ✅ o ⏳ según decisión paso 6.
 - Update MEMORY.md con ADR 0010 + plan 0005.
-- Commit + tag (`wf-fase-2-completed` o `wf-fase-2-baseline-only`).
+- Commit + tag (`braid-fase-2-completed` o `braid-fase-2-baseline-only`).
 
 ## Criterios de aceptación
 
 1. ✅ ADR 0010 escrito.
-2. ✅ `wikiforge eval` no es stub; ejecuta y reporta JSON estructurado (10 preguntas, scoring 0/0.5/1.0, recall@1, recall@K, run JSON guardado).
+2. ✅ `braid eval` no es stub; ejecuta y reporta JSON estructurado (10 preguntas, scoring 0/0.5/1.0, recall@1, recall@K, run JSON guardado).
 3. ✅ `.memory/eval/questions.json` con 10 preguntas + ground truth (cubre CONTAINS, DOCUMENTS, MENTIONS, IMPORTS).
 4. ⚠️ **Reindex completo NO completado** — Ollama Cloud `kimi-k2.6:cloud` no responde (síntoma 11.8 activo verificado vía `curl -m 30 /v1/chat/completions` → timeout). Reindex se mató tras 8 minutos de hang sin progreso (10 conexiones TCP a Ollama, 4 con CLOSE_WAIT a cloudfront, CPU 0.0%). Snapshot del dataset parcial pre-rebuild restaurado.
 5. ✅ Baseline ejecutado y guardado en `.memory/eval/runs/baseline-fase-2.json` contra dataset parcial (4 docs originales del cognify mini de 2026-05-04).
@@ -108,11 +108,11 @@ El criterio se cumple con el baseline de 5.5/10 registrado en `.memory/eval/runs
 ## Riesgos
 
 - **Reindex puede colgarse o agotar Ollama Cloud.** Mitigación: rate limit ya en `.env`; si falla, retry una vez; si falla otra, baseline parcial con dataset existente y registrar el blocker.
-- **Algunas preguntas pueden quedar fuera del corpus indexado** si un archivo se excluye del scope. Mitigación: las preguntas usan substrings que están en archivos seguros (`AGENTS.md`, `.memory/decisions/*.md`, `src/wikiforge/**/*.py`).
-- **Substring matching laxo** puede dar falsos positivos. Mitigación: ground truth con paths completos (`src/wikiforge/commands/claude.py`) reduce falsos +.
+- **Algunas preguntas pueden quedar fuera del corpus indexado** si un archivo se excluye del scope. Mitigación: las preguntas usan substrings que están en archivos seguros (`AGENTS.md`, `.memory/decisions/*.md`, `src/braid/**/*.py`).
+- **Substring matching laxo** puede dar falsos positivos. Mitigación: ground truth con paths completos (`src/braid/commands/claude.py`) reduce falsos +.
 
 ## Fuera de alcance
 
-- Suite eval para repos distintos de WikiForge (cada repo construye sus questions.json).
+- Suite eval para repos distintos de Braid (cada repo construye sus questions.json).
 - LLM-as-judge scoring (sec. 11.6 Langfuse cuando aplique).
 - Comparación cross-stack (kimi vs Claude Sonnet, etc.) — eso es síntoma 11.10.

@@ -14,7 +14,7 @@
 
 Fase 0 cerró con `4.0/5.0` por dos preguntas (Q2 callsite de `audit_exam_associations`, Q3 inventario archivos plugin VP) atascadas en 0.5: el chunk canónico estaba indexado y aparecía en top-5 chunks devueltos por bge-m3, pero no en top-1. El reordenamiento de top-K → top-1 es exactamente lo que hace un cross-encoder reranker.
 
-`wikiforge eval` ya implementa la infraestructura para medir el delta: con reranker activo, la métrica `recall@1` debería subir conservando `recall@K`. Si Q2/Q3 escalan a 1.0 y otras no se degradan, el ROI es claro.
+`braid eval` ya implementa la infraestructura para medir el delta: con reranker activo, la métrica `recall@1` debería subir conservando `recall@K`. Si Q2/Q3 escalan a 1.0 y otras no se degradan, el ROI es claro.
 
 ## Decisión
 
@@ -33,7 +33,7 @@ Activar **bge-reranker-v2-m3** (BAAI, MIT, ~568 MB, multilingüe) como paso post
 3. `runner.run_search(rerank=True)` opcional → reordena top-K antes de devolver.
 4. `commands/eval.py` y `commands/ask.py` reciben flag `--rerank` (default off; activable per call).
 5. `.kgconfig` añade `reranker = "bge-reranker-v2-m3"` opcional.
-6. `wikiforge eval` con `--rerank` ejecuta y guarda como nuevo run; comparación con baseline mide delta.
+6. `braid eval` con `--rerank` ejecuta y guarda como nuevo run; comparación con baseline mide delta.
 
 ### Privacidad / coste
 
@@ -48,11 +48,11 @@ Activar **bge-reranker-v2-m3** (BAAI, MIT, ~568 MB, multilingüe) como paso post
 **Plan operativo:**
 
 1. **Esta sesión**: ADR escrito, código del reranker preparado pero NO mergeado. Marcado como "Proposed".
-2. **Próxima sesión que retome WikiForge**:
+2. **Próxima sesión que retome Braid**:
    - Verificar Ollama Cloud (`curl -m 10 http://localhost:11434/v1/chat/completions ...`).
-   - Si vivo: `wikiforge index --rebuild` → completar.
+   - Si vivo: `braid index --rebuild` → completar.
    - Si sigue caído >24h: aplicar AGENTS.md sec. 11.8 reversión a `qwen3:30b` local (ya descargado, `ollama ls` lo confirma) — requiere ADR de re-pivote.
-3. **Tras reindex completo**: instalar `sentence-transformers`, activar el helper `runner.rerank`, correr `wikiforge eval --rerank`, comparar con `baseline-fase-2.json`. Si delta `recall@1` ≥ +0.20, marcar este ADR como "Active". Si no, archivar como "Rejected — beneficio insuficiente".
+3. **Tras reindex completo**: instalar `sentence-transformers`, activar el helper `runner.rerank`, correr `braid eval --rerank`, comparar con `baseline-fase-2.json`. Si delta `recall@1` ≥ +0.20, marcar este ADR como "Active". Si no, archivar como "Rejected — beneficio insuficiente".
 
 ## Alternativas consideradas
 
@@ -68,7 +68,7 @@ Activar **bge-reranker-v2-m3** (BAAI, MIT, ~568 MB, multilingüe) como paso post
 
 - Q2/Q3 esperadas a 1.0 → total 5/5 en repo de prueba Fase 0.
 - recall@1 sube sin tocar recall@K.
-- Aplicable a cualquier repo gobernado por WikiForge — el reranker no es repo-específico.
+- Aplicable a cualquier repo gobernado por Braid — el reranker no es repo-específico.
 
 ### Negativas
 
@@ -84,10 +84,10 @@ Activar **bge-reranker-v2-m3** (BAAI, MIT, ~568 MB, multilingüe) como paso post
 
 ## Verificación pendiente
 
-1. `pip install sentence-transformers` resuelve sin conflictos en el venv WikiForge.
+1. `pip install sentence-transformers` resuelve sin conflictos en el venv Braid.
 2. Primera carga del modelo descarga ~568 MB de HF.
 3. `runner.rerank(query, [chunk1..chunk10], top_n=10)` devuelve los mismos 10 chunks reordenados.
-4. `wikiforge eval --rerank` ejecuta sin nuevos errores.
+4. `braid eval --rerank` ejecuta sin nuevos errores.
 5. Comparativa con `baseline-fase-2.json`: delta recall@1 medido y reportado.
 
 ## Referencias

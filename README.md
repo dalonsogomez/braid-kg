@@ -7,9 +7,9 @@ Codex CLI, Cursor, Cline, Aider, and Goose. Its goal is to answer questions
 about the active repository from the code, ADRs, and documentation that are
 actually present in that repository.
 
-The canonical project, package, and CLI name is now `braid`. The previous
-`fairlead` and `wikiforge` names are kept only as transitional aliases and in
-historical ADRs/plans where they are needed for traceability.
+The canonical project, package, and CLI name is `braid`. Older command names
+are transitional compatibility aliases only: they warn and delegate to
+`braid`.
 
 ## Project Layout
 

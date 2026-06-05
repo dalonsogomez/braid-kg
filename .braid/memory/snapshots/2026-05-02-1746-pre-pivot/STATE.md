@@ -14,16 +14,16 @@ El usuario pidió "máquina del tiempo" antes de un pivote arquitectónico mayor
 
 ```bash
 # Volver al commit etiquetado
-cd ~/Developer/claude/code-projects/WikiForge
-git reset --hard wf-checkpoint-2026-05-02-1746
+cd ~/Developer/claude/code-projects/Braid
+git reset --hard braid-checkpoint-2026-05-02-1746
 
 # Restaurar archivos externos
-cp .memory/snapshots/2026-05-02-1746-pre-pivot/cognee-mcp.env ~/.wikiforge/cognee-mcp/cognee-mcp/.env
-cp .memory/snapshots/2026-05-02-1746-pre-pivot/cognee-mcp-stdio.sh ~/.wikiforge/bin/cognee-mcp-stdio.sh
-chmod +x ~/.wikiforge/bin/cognee-mcp-stdio.sh
+cp .memory/snapshots/2026-05-02-1746-pre-pivot/cognee-mcp.env ~/.braid/cognee-mcp/cognee-mcp/.env
+cp .memory/snapshots/2026-05-02-1746-pre-pivot/cognee-mcp-stdio.sh ~/.braid/bin/cognee-mcp-stdio.sh
+chmod +x ~/.braid/bin/cognee-mcp-stdio.sh
 
 # Si necesitas la API key de Gemini, recupérala del sistema (o vuelve a generarla en aistudio.google.com)
-# El archivo ~/.config/wikiforge/secrets.env NO está respaldado aquí por seguridad.
+# El archivo ~/.config/braid/secrets.env NO está respaldado aquí por seguridad.
 ```
 
 ## Estado del repo en este snapshot
@@ -36,10 +36,10 @@ chmod +x ~/.wikiforge/bin/cognee-mcp-stdio.sh
 
 ## Estado de instalaciones externas en este snapshot
 
-- `~/.wikiforge/cognee-mcp/` — clone de `topoteretes/cognee` con `uv sync` completado (cognee 1.0.0 instalado).
-- `~/.wikiforge/bin/cognee-mcp-stdio.sh` — shim funcional (lee de secrets.env y ejecuta server stdio).
-- `~/.wikiforge/cognee-mcp/cognee-mcp/.env` — config Gemini.
-- `~/.config/wikiforge/secrets.env` — chmod 600, contiene GEMINI_API_KEY y MINIMAX_API_KEY (no respaldado aquí).
+- `~/.braid/cognee-mcp/` — clone de `topoteretes/cognee` con `uv sync` completado (cognee 1.0.0 instalado).
+- `~/.braid/bin/cognee-mcp-stdio.sh` — shim funcional (lee de secrets.env y ejecuta server stdio).
+- `~/.braid/cognee-mcp/cognee-mcp/.env` — config Gemini.
+- `~/.config/braid/secrets.env` — chmod 600, contiene GEMINI_API_KEY y MINIMAX_API_KEY (no respaldado aquí).
 - Ollama: NO instalado.
 - Modelos locales: NO descargados.
 - MCP server `cognee` en Claude Code: NO registrado.
