@@ -133,6 +133,14 @@ def _utc_naive(dt: datetime) -> datetime:
     return dt
 
 
+def _sql_str_or_null(value: Any | None) -> str:
+    """Return a simple SQL string literal or NULL for optional values."""
+
+    if value is None:
+        return "NULL"
+    return "'" + str(value).replace("'", "''") + "'"
+
+
 # Legacy constants for backward compatibility (used by tests and direct imports)
 DUCKLAKE_CATALOG = _default_catalog_path()
 FTS_DB_PATH = _default_fts_path()
@@ -442,11 +450,12 @@ class BraidCatalog:
         """Store a session-level memory entry."""
         _id = _next_id_for("session_memory", self.con)
         meta_json = json.dumps(metadata) if metadata else "NULL"
+        project_sql = _sql_str_or_null(project_slug)
         self._x(
             f"INSERT INTO {self.alias}.session_memory "
             f"(id, session_id, agent_id, project_slug, memory_type, key, value, metadata_json) "
             f"VALUES ({_id}, '{session_id}', '{agent_id}', "
-            f"{'NULL' if project_slug is None else f"'{project_slug}'"}, "
+            f"{project_sql}, "
             f"'{memory_type}', '{key}', '{value}', {meta_json})"
         )
         return _id
@@ -486,11 +495,12 @@ class BraidCatalog:
         """Promote a session memory to project level (AGENTS.md sec. 4.2 — explicit only)."""
         _id = _next_id_for("project_memory", self.con)
         tags_sql = str(tags) if tags else "NULL"
+        adr_sql = _sql_str_or_null(adr_id)
         self._x(
             f"INSERT INTO {self.alias}.project_memory "
             f"(id, project_slug, memory_type, key, value, adr_id, tags, confidence) "
             f"VALUES ({_id}, '{project_slug}', '{memory_type}', '{key}', '{value}', "
-            f"{'NULL' if adr_id is None else f"'{adr_id}'"}, {tags_sql}, {confidence})"
+            f"{adr_sql}, {tags_sql}, {confidence})"
         )
         # Mark session memory as promoted
         self._x(
@@ -1304,15 +1314,18 @@ class BraidCatalog:
         """Store an Architecture Decision Record."""
         _id = _next_id_for("adrs", self.con)
         tags_sql = str(tags) if tags else "NULL"
+        superseded_sql = _sql_str_or_null(superseded_by)
+        consequences_sql = _sql_str_or_null(consequences)
+        file_path_sql = _sql_str_or_null(file_path)
         self._x(
             f"INSERT INTO {self.alias}.adrs "
             f"(id, adr_id, title, status, superseded_by, context, decision, consequences, tags, project_slug, file_path) "
             f"VALUES ({_id}, '{adr_id}', '{title}', '{status}', "
-            f"{'NULL' if superseded_by is None else f"'{superseded_by}'"}, "
+            f"{superseded_sql}, "
             f"'{context}', '{decision}', "
-            f"{'NULL' if consequences is None else f"'{consequences}'"}, "
+            f"{consequences_sql}, "
             f"{tags_sql}, '{project_slug}', "
-            f"{'NULL' if file_path is None else f"'{file_path}'"})"
+            f"{file_path_sql})"
         )
         return _id
 
@@ -1419,15 +1432,19 @@ class BraidCatalog:
     ) -> int:
         """Store a conversation record."""
         _id = _next_id_for("conversations", self.con)
+        project_sql = _sql_str_or_null(project_slug)
+        model_sql = _sql_str_or_null(model_used)
+        tool_sql = _sql_str_or_null(tool_used)
+        summary_sql = _sql_str_or_null(summary)
         self._x(
             f"INSERT INTO {self.alias}.conversations "
             f"(id, conversation_id, agent_id, project_slug, session_type, model_used, tool_used, summary) "
             f"VALUES ({_id}, '{conversation_id}', '{agent_id}', "
-            f"{'NULL' if project_slug is None else f"'{project_slug}'"}, "
+            f"{project_sql}, "
             f"'{session_type}', "
-            f"{'NULL' if model_used is None else f"'{model_used}'"}, "
-            f"{'NULL' if tool_used is None else f"'{tool_used}'"}, "
-            f"{'NULL' if summary is None else f"'{summary}'"})"
+            f"{model_sql}, "
+            f"{tool_sql}, "
+            f"{summary_sql})"
         )
         return _id
 
@@ -1656,6 +1673,7 @@ class BraidCatalog:
     ) -> int:
         """Store an eval run result."""
         _id = _next_id_for("eval_runs", self.con)
+        model_sql = _sql_str_or_null(model_used)
         self._x(
             f"INSERT INTO {self.alias}.eval_runs "
             f"(id, run_id, project_slug, total_questions, total_score, recall_at_1, recall_at_k, "
@@ -1664,7 +1682,7 @@ class BraidCatalog:
             f"{'NULL' if recall_at_1 is None else str(recall_at_1)}, "
             f"{'NULL' if recall_at_k is None else str(recall_at_k)}, "
             f"{rerank_used}, '{search_type}', "
-            f"{'NULL' if model_used is None else f"'{model_used}'"})"
+            f"{model_sql})"
         )
         return _id
 
@@ -1687,12 +1705,14 @@ class BraidCatalog:
         """Track an ingested file."""
         _id = _next_id_for("ingested_files", self.con)
         ts = str(last_modified) if last_modified else "now()"
+        language_sql = _sql_str_or_null(language)
+        dataset_sql = _sql_str_or_null(dataset_id)
         self._x(
             f"INSERT INTO {self.alias}.ingested_files "
             f"(id, project_slug, file_path, file_hash, file_size, language, kind, last_modified, chunk_count, dataset_id) "
             f"VALUES ({_id}, '{project_slug}', '{file_path}', '{file_hash}', {file_size}, "
-            f"{'NULL' if language is None else f"'{language}'"}, '{kind}', {ts}, {chunk_count}, "
-            f"{'NULL' if dataset_id is None else f"'{dataset_id}'"})"
+            f"{language_sql}, '{kind}', {ts}, {chunk_count}, "
+            f"{dataset_sql})"
         )
         return _id
 
@@ -1721,12 +1741,14 @@ class BraidCatalog:
         _id = _next_id_for("agents", self.con)
         caps_sql = str(capabilities) if capabilities else "NULL"
         projs_sql = str(project_slugs) if project_slugs else "NULL"
+        agent_type_sql = _sql_str_or_null(agent_type)
+        description_sql = _sql_str_or_null(description)
         self._x(
             f"INSERT INTO {self.alias}.agents "
             f"(id, agent_id, agent_name, agent_type, description, capabilities, project_slugs, last_active_at) "
             f"VALUES ({_id}, '{agent_id}', '{agent_name}', "
-            f"{'NULL' if agent_type is None else f"'{agent_type}'"}, "
-            f"{'NULL' if description is None else f"'{description}'"}, "
+            f"{agent_type_sql}, "
+            f"{description_sql}, "
             f"{caps_sql}, {projs_sql}, now())"
         )
         return _id
