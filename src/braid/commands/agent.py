@@ -27,23 +27,40 @@ class AgentInitResult:
     changed: bool = False
     drift: list[str] = field(default_factory=list)
     actions: list[str] = field(default_factory=list)
+    error: str | None = None
 
     @property
     def ok(self) -> bool:
         return self.status in {"ok", "changed", "removed"} and not self.drift
 
 
+@dataclass(frozen=True)
+class JsonLoadResult:
+    data: dict
+    error: str | None = None
+
+
 def _root() -> Path:
     return find_project_root() or find_git_root() or Path.cwd().resolve()
 
 
-def _load_json(path: Path) -> dict:
+def _load_json(path: Path) -> JsonLoadResult:
     if not path.is_file():
-        return {}
+        return JsonLoadResult({})
     try:
-        return json.loads(path.read_text()) or {}
-    except (OSError, json.JSONDecodeError):
-        return {}
+        value = json.loads(path.read_text())
+    except OSError as exc:
+        return JsonLoadResult({}, error=f"read_error: {exc}")
+    except json.JSONDecodeError as exc:
+        return JsonLoadResult(
+            {},
+            error=f"invalid_json: {exc.msg} at line {exc.lineno} column {exc.colno}",
+        )
+    if value is None:
+        return JsonLoadResult({})
+    if not isinstance(value, dict):
+        return JsonLoadResult({}, error=f"invalid_json_type: expected object, got {type(value).__name__}")
+    return JsonLoadResult(value)
 
 
 def _save_json(path: Path, data: dict) -> None:
@@ -203,7 +220,16 @@ def _remove_mcp(settings: dict) -> tuple[dict, list[str]]:
 
 
 def _json_agent(agent: AgentName, root: Path, path: Path, mode: Mode, include_mcp: bool) -> AgentInitResult:
-    settings = _load_json(path)
+    loaded = _load_json(path)
+    if loaded.error:
+        return AgentInitResult(
+            agent=agent,
+            target=str(path),
+            status="error",
+            drift=["invalid_json"],
+            error=loaded.error,
+        )
+    settings = loaded.data
     drift = _hook_drift(settings)
     if include_mcp:
         drift.extend(_mcp_drift(settings))
@@ -323,8 +349,10 @@ def _mode(check: bool, fix: bool, remove: bool) -> Mode:
 def _print_human(root: Path, mode: Mode, results: list[AgentInitResult]) -> None:
     print(f"[braid agent-init] root={root} mode={mode}")
     for result in results:
-        marker = "!" if result.drift else "+" if result.changed else "."
+        marker = "x" if result.error else "!" if result.drift else "+" if result.changed else "."
         print(f"  {marker} {result.agent}: {result.status} {result.target}")
+        if result.error:
+            print(f"      error: {result.error}")
         for item in result.drift:
             print(f"      drift: {item}")
         for item in result.actions:

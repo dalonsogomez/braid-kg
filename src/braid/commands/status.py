@@ -1,6 +1,10 @@
 """`braid status`: resumen del proyecto activo + perfil global + DuckLake."""
 from __future__ import annotations
 
+import json
+import sys
+from pathlib import Path
+
 from ..paths import GLOBAL_DATASET_ID, PROFILE_DIR, resolve_context
 
 
@@ -17,31 +21,56 @@ def _ducklake_status() -> dict | None:
         return None
 
 
-def run() -> int:
+def _string_path(path: Path | None) -> str | None:
+    return str(path) if path is not None else None
+
+
+def build_status_payload() -> dict:
     ctx = resolve_context()
-    if ctx.global_profile:
-        print(f"Perfil global activo: {ctx.dataset_id}")
-        print(f"  $HOME:    {ctx.root}")
-        print(f"  storage:  {ctx.braid_dir}")
-        print(f"  kg/:      {'sí' if ctx.has_kg else 'no'}")
-        print(f"  config:   {'sí' if ctx.has_config else 'no'}")
-    else:
-        print(f"Proyecto activo: {ctx.dataset_id}")
-        print(f"  raíz:     {ctx.root}")
-        print(f"  .braid/:  {'sí' if ctx.braid_dir.is_dir() else 'no'}")
-        print(f"  kg/:      {'sí' if ctx.has_kg else 'no'}")
-        print(f"  config:   {'sí' if ctx.has_config else 'no'}")
-        if ctx.legacy_layout:
-            print("  legacy:   sí (lectura de migración)")
     decisions = ctx.memory_dir / "decisions"
     n_decisions = len(list(decisions.glob("[0-9]*-*.md"))) if decisions.is_dir() else 0
-    print(f"  ADRs:     {n_decisions}")
+    return {
+        "root": str(ctx.root),
+        "dataset_id": ctx.dataset_id,
+        "global_profile": ctx.global_profile,
+        "state_dir": str(ctx.braid_dir),
+        "braid_dir": str(ctx.braid_dir),
+        "memory_dir": str(ctx.memory_dir),
+        "kg_dir": str(ctx.kg_dir),
+        "rag_dir": str(ctx.rag_dir),
+        "wiki_dir": str(ctx.wiki_dir),
+        "has_config": ctx.has_config,
+        "config_path": _string_path(ctx.config_path),
+        "has_kg": ctx.has_kg,
+        "legacy_layout": ctx.legacy_layout,
+        "adr_count": n_decisions,
+        "global_profile_dir": str(PROFILE_DIR),
+        "global_profile_exists": PROFILE_DIR.is_dir(),
+        "ducklake": _ducklake_status(),
+    }
 
-    # DuckLake status
-    dl = _ducklake_status()
+
+def _print_human(payload: dict) -> None:
+    if payload["global_profile"]:
+        print(f"Perfil global activo: {payload['dataset_id']}")
+        print(f"  $HOME:    {payload['root']}")
+        print(f"  storage:  {payload['state_dir']}")
+        print(f"  kg/:      {'sí' if payload['has_kg'] else 'no'}")
+        print(f"  config:   {'sí' if payload['has_config'] else 'no'}")
+    else:
+        print(f"Proyecto activo: {payload['dataset_id']}")
+        print(f"  raíz:     {payload['root']}")
+        print(f"  .braid/:  {'sí' if Path(payload['braid_dir']).is_dir() else 'no'}")
+        print(f"  kg/:      {'sí' if payload['has_kg'] else 'no'}")
+        print(f"  config:   {'sí' if payload['has_config'] else 'no'}")
+        if payload["legacy_layout"]:
+            print("  legacy:   sí (lectura de migración)")
+    print(f"  ADRs:     {payload['adr_count']}")
+
+    dl = payload.get("ducklake")
     if dl:
         print()
-        print(f"DuckLake catalog:")
+        print("DuckLake catalog:")
         print(f"  tablas:   {dl.get('tables', '?')}")
         print(f"  filas:    {dl.get('total_rows', 0)}")
         per_table = dl.get("per_table", {})
@@ -50,10 +79,18 @@ def run() -> int:
             for name, count in top_tables:
                 print(f"    {name}: {count}")
 
-    if not ctx.global_profile:
+    if not payload["global_profile"]:
         print()
         print(f"Perfil global ({GLOBAL_DATASET_ID}):")
         print(f"  $HOME:    {PROFILE_DIR.parent.parent}")
-        print(f"  storage:  {PROFILE_DIR}")
-        print(f"  existe:   {'sí' if PROFILE_DIR.is_dir() else 'no'}")
+        print(f"  storage:  {payload['global_profile_dir']}")
+        print(f"  existe:   {'sí' if payload['global_profile_exists'] else 'no'}")
+
+
+def run(as_json: bool = False) -> int:
+    payload = build_status_payload()
+    if as_json:
+        sys.stdout.write(json.dumps(payload, indent=2, ensure_ascii=False, default=str) + "\n")
+        return 0
+    _print_human(payload)
     return 0

@@ -66,6 +66,53 @@ def test_check_detects_legacy_claude_without_writing(tmp_path: Path, monkeypatch
     assert "legacy_mcp" in result["drift"]
 
 
+def test_check_reports_invalid_json_without_writing(tmp_path: Path, monkeypatch, capsys):
+    root = _project(tmp_path)
+    settings_path = root / ".claude" / "settings.json"
+    settings_path.parent.mkdir(parents=True)
+    settings_path.write_text("{not valid json\n")
+    before = settings_path.read_text()
+
+    monkeypatch.chdir(root)
+    assert agent_cmd.run(agent="claude", check=True, as_json=True) == 1
+
+    assert settings_path.read_text() == before
+    payload = json.loads(capsys.readouterr().out)
+    result = payload["agents"][0]
+    assert result["status"] == "error"
+    assert result["error"].startswith("invalid_json")
+    assert "invalid_json" in result["drift"]
+
+
+def test_fix_does_not_overwrite_invalid_json(tmp_path: Path, monkeypatch, capsys):
+    root = _project(tmp_path)
+    settings_path = root / ".codex" / "hooks.json"
+    settings_path.parent.mkdir(parents=True)
+    settings_path.write_text("[1, 2, 3]\n")
+    before = settings_path.read_text()
+
+    monkeypatch.chdir(root)
+    assert agent_cmd.run(agent="codex", fix=True, as_json=True) == 1
+
+    assert settings_path.read_text() == before
+    payload = json.loads(capsys.readouterr().out)
+    result = payload["agents"][0]
+    assert result["status"] == "error"
+    assert "expected object" in result["error"]
+
+
+def test_fix_creates_missing_json_config(tmp_path: Path, monkeypatch):
+    root = _project(tmp_path)
+    target = root / ".codex" / "hooks.json"
+
+    monkeypatch.chdir(root)
+    assert agent_cmd.run(agent="codex", fix=True) == 0
+
+    assert target.is_file()
+    data = _read_json(target)
+    assert data["hooks"]["SessionStart"][0]["hooks"][0]["command"] == "braid claude-session-start"
+
+
 def test_fix_migrates_legacy_hooks_and_creates_discovery_symlinks(tmp_path: Path, monkeypatch):
     root = _project(tmp_path)
     _write_json(root / ".claude" / "settings.json", _legacy_settings())

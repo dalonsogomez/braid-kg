@@ -76,6 +76,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_mcp = sub.add_parser("mcp-serve", help="lanzar MCP server (stdio transport)")
 
     p_status = sub.add_parser("status", help="resumen del proyecto activo + perfil global")
+    p_status.add_argument("--json", dest="as_json", action="store_true", help="emitir JSON estructurado")
+
+    p_doc = sub.add_parser("doctor", help="diagnosticar instalación, contexto, agentes y estado Braid")
+    p_doc.add_argument("--json", dest="as_json", action="store_true", help="emitir JSON estructurado")
+    p_doc.add_argument("--fix", action="store_true", help="aplicar solo reparaciones locales seguras")
 
     p_ai = sub.add_parser("agent-init", help="aplicar/verificar/reparar integración Braid para agentes IA")
     p_ai.add_argument(
@@ -126,7 +131,10 @@ def main(argv: list[str] | None = None) -> int:
         return sync_cmd.run()
     if cmd == "status":
         from .commands import status as status_cmd
-        return status_cmd.run()
+        return status_cmd.run(as_json=args.as_json)
+    if cmd == "doctor":
+        from .commands import doctor as doctor_cmd
+        return doctor_cmd.run(as_json=args.as_json, fix=args.fix)
     if cmd == "agent-init":
         return agent_cmd.run(
             agent=args.agent,

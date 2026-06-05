@@ -109,9 +109,24 @@ Then initialize the project you want Braid to remember:
 ```bash
 cd ~/Developer/my-project
 braid init
+braid doctor
 braid agent-init --fix
 braid index
-braid status
+braid status --json
+```
+
+For a local development checkout, the editable install remains:
+
+```bash
+uv pip install -e ".[cognee,ducklake,mcp,test]"
+```
+
+For day-to-day use from any repository, prefer a tool-style install once the
+package source is on your machine:
+
+```bash
+uv tool install --editable ~/Developer/braid
+braid doctor
 ```
 
 Ask from the active project:
@@ -191,7 +206,8 @@ The current MCP server exposes:
 | `braid sync` | Reconcile filesystem state with the index. |
 | `braid eval` | Run grounding and recall evaluation questions. |
 | `braid wiki build` | Generate Markdown wiki output under `.braid/wiki/`. |
-| `braid status` | Print active project and memory status. |
+| `braid status --json` | Print active project and memory status as stable JSON for agents. |
+| `braid doctor` | Diagnose installation, context, agent drift, secrets, GitHub remote, and catalog health without indexing or LLM calls. |
 | `braid agent-init` | Apply, check, fix, or remove supported agent integrations. |
 | `braid claude-session-start` | Fast hook command for agent session startup. |
 | `braid mcp-serve` | Start the Braid MCP server over stdio. |
@@ -227,6 +243,8 @@ Useful local checks:
 
 ```bash
 PYTHONPATH=src .venv/bin/python -m braid.cli --help
+PYTHONPATH=src .venv/bin/python -m braid.cli status --json
+braid doctor --json
 braid agent-init --check --json
 git diff --check
 ```
@@ -234,12 +252,23 @@ git diff --check
 DuckLake tests should use temporary catalogs and must not depend on a real local
 `.braid/kg` catalog.
 
-## Recommended Next Improvements
+## Diagnostics
 
-The next useful product improvement is `braid doctor`: a read-only/fix-capable
-diagnostic command that checks installation, path resolution, `.braid/` layout,
-legacy drift, agent hooks, MCP config, secrets location, Git remote identity, and
-common broken-catalog symptoms.
+`braid doctor` is the first command to run when a project looks misconfigured.
+It checks path resolution, `.braid/` layout, legacy drift, agent hooks, JSON
+config validity, secrets, GitHub remote identity, and DuckLake availability.
+
+```bash
+braid doctor
+braid doctor --json
+braid doctor --fix
+```
+
+`doctor` does not run `braid index`, call an LLM, or promote memory. `--fix` is
+limited to local Braid-managed repairs such as safe `.braid/` directory creation
+and agent integration repair.
+
+## Recommended Next Improvements
 
 Retrieval architecture changes should wait for evidence from `braid eval`. If
 grounding, recall, or reranking fails in measurable ways, the change should be

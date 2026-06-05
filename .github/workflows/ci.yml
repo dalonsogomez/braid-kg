@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[ducklake,mcp,test]"
+
+      - name: Validate README diagram assets
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import re
+          import xml.etree.ElementTree as ET
+
+          root = Path.cwd()
+          readme = (root / "README.md").read_text()
+          links = re.findall(r'!\\[[^\\]]*\\]\\(([^)]+)\\)', readme)
+          missing = [link for link in links if not (root / link).is_file()]
+          if missing:
+              raise SystemExit(f"missing README image assets: {missing}")
+          for path in sorted((root / "docs" / "diagrams").glob("*.excalidraw")):
+              data = json.loads(path.read_text())
+              if data.get("type") != "excalidraw" or not data.get("elements"):
+                  raise SystemExit(f"invalid Excalidraw file: {path}")
+          for path in sorted((root / "docs" / "diagrams").glob("*.svg")):
+              ET.parse(path)
+          PY
+
+      - name: Run tests
+        run: PYTHONPATH=src pytest -q
+
+      - name: Check CLI
+        run: |
+          PYTHONPATH=src python -m braid.cli --help
+          PYTHONPATH=src python -m braid.cli status --json
+
+      - name: Check diff whitespace
+        run: git diff --check
