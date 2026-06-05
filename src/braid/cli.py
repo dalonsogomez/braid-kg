@@ -10,6 +10,7 @@ import re
 import sys
 
 from .commands import ask as ask_cmd
+from .commands import agent as agent_cmd
 from .commands import index as index_cmd
 from .commands import init as init_cmd
 from .commands import promote as promote_cmd
@@ -76,6 +77,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_status = sub.add_parser("status", help="resumen del proyecto activo + perfil global")
 
+    p_ai = sub.add_parser("agent-init", help="aplicar/verificar/reparar integración Braid para agentes IA")
+    p_ai.add_argument(
+        "--agent",
+        default="all",
+        choices=["claude", "codex", "cursor", "copilot", "all"],
+        help="agente a configurar (default: all)",
+    )
+    mode = p_ai.add_mutually_exclusive_group()
+    mode.add_argument("--check", action="store_true", help="solo verificar drift; no escribe")
+    mode.add_argument("--fix", action="store_true", help="normalizar configuraciones legacy")
+    mode.add_argument("--remove", action="store_true", help="retirar solo bloques gestionados por Braid")
+    p_ai.add_argument("--json", dest="as_json", action="store_true", help="emitir JSON estructurado")
+
     # ADR 0009 — auto-bootstrap RAG vía SessionStart hook
     p_css = sub.add_parser(
         "claude-session-start",
@@ -113,6 +127,14 @@ def main(argv: list[str] | None = None) -> int:
     if cmd == "status":
         from .commands import status as status_cmd
         return status_cmd.run()
+    if cmd == "agent-init":
+        return agent_cmd.run(
+            agent=args.agent,
+            check=args.check,
+            fix=args.fix,
+            remove=args.remove,
+            as_json=args.as_json,
+        )
     if cmd == "claude-session-start":
         from .commands import claude as claude_cmd
         return claude_cmd.run_session_start(as_json=args.as_json)

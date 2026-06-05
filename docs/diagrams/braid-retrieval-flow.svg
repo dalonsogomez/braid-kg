@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="560" viewBox="0 0 1120 560" role="img" aria-labelledby="title desc">
+  <title id="title">Braid retrieval flow</title>
+  <desc id="desc">Repository files and memory are indexed into project state and exposed through Braid CLI and MCP tools.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/>
+    </marker>
+    <style>
+      .label { font: 700 26px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #111827; }
+      .body { font: 18px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #1f2937; }
+      .mono { font: 16px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #111827; }
+      .small { font: 15px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #4b5563; }
+      .card { rx: 18; ry: 18; stroke-width: 2.5; }
+    </style>
+  </defs>
+
+  <rect width="1120" height="560" fill="#ffffff"/>
+  <text x="56" y="58" class="label">Braid retrieval keeps sources separate and measurable</text>
+  <text x="56" y="90" class="body">Code, docs, ADRs, FTS, vectors, graph traversal, and global fallback remain inspectable surfaces.</text>
+
+  <rect x="54" y="154" width="190" height="122" class="card" fill="#dbeafe" stroke="#1d4ed8"/>
+  <text x="84" y="194" class="label" fill="#1e3a8a">Inputs</text>
+  <text x="84" y="230" class="small">Repo files</text>
+  <text x="84" y="254" class="small">Docs and ADRs</text>
+
+  <path d="M 244 215 L 314 215" fill="none" stroke="#374151" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <rect x="314" y="154" width="190" height="122" class="card" fill="#ccfbf1" stroke="#0f766e"/>
+  <text x="344" y="194" class="label" fill="#134e4a">Index</text>
+  <text x="344" y="230" class="mono">braid index</text>
+  <text x="344" y="254" class="small">Cognee + DuckLake</text>
+
+  <path d="M 504 215 L 574 215" fill="none" stroke="#374151" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <rect x="574" y="154" width="246" height="122" class="card" fill="#ede9fe" stroke="#4c1d95"/>
+  <text x="604" y="194" class="label" fill="#4c1d95">Project state</text>
+  <text x="604" y="230" class="mono">.braid/kg + .braid/rag</text>
+  <text x="604" y="254" class="small">FTS, vectors, graph, memory</text>
+
+  <path d="M 820 215 L 890 215" fill="none" stroke="#374151" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <rect x="890" y="154" width="190" height="122" class="card" fill="#ffedd5" stroke="#7c2d12"/>
+  <text x="920" y="194" class="label" fill="#7c2d12">MCP</text>
+  <text x="920" y="230" class="small">braid_search</text>
+  <text x="920" y="254" class="small">memory, ADRs, KG</text>
+
+  <rect x="178" y="354" width="220" height="104" class="card" fill="#fef3c7" stroke="#854d0e"/>
+  <text x="208" y="394" class="label" fill="#713f12">CLI</text>
+  <text x="208" y="430" class="mono">braid ask/status/eval</text>
+
+  <rect x="452" y="354" width="250" height="104" class="card" fill="#fee2e2" stroke="#b91c1c"/>
+  <text x="482" y="394" class="label" fill="#991b1b">Global fallback</text>
+  <text x="482" y="430" class="mono">$HOME/.braid/profile</text>
+
+  <rect x="756" y="354" width="230" height="104" class="card" fill="#e0f2fe" stroke="#0369a1"/>
+  <text x="786" y="394" class="label" fill="#075985">Agents</text>
+  <text x="786" y="430" class="small">Claude, Codex, Cursor, Copilot</text>
+
+  <path d="M 288 354 C 288 318, 410 300, 574 260" fill="none" stroke="#854d0e" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M 577 354 C 574 318, 606 302, 648 276" fill="none" stroke="#b91c1c" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M 871 354 C 936 318, 960 292, 980 276" fill="none" stroke="#0369a1" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <text x="452" y="504" class="body">Retrieval changes should be driven by braid eval, not by architecture guesses.</text>
+</svg>

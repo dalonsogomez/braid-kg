@@ -188,6 +188,7 @@ El CLI es deliberadamente pequeño. Hace pocas cosas y las hace bien. Cualquier 
 | `braid wiki build` | (Mes 2+) Genera Markdown desde Cognee y compila Astro Starlight. |
 | `braid claude-session-start` | (ADR 0009) Subcomando de hook. Lee filesystem, reporta estado de memoria del repo activo en una línea (al día / stale / no inicializado / no-repo) en p50 ≈ 250 ms. **No llama al LLM ni crea `.braid/kg/`.** Soporta `--json`. Su stdout entra en el contexto de Claude Code (sec. 4 schema oficial Anthropic). |
 | `braid claude-init` | (ADR 0009) Cablea hook `SessionStart` (matchers `startup\|resume\|clear\|compact`, `timeout: 5s`, `statusMessage`) en `<git_root>/.claude/settings.json`. Idempotente; preserva otras claves (`permissions`, `env`, otros hooks). `--remove` lo desinstala. |
+| `braid agent-init` | (ADR 0017) Aplica, verifica, repara o retira integración Braid para Claude, Codex, Cursor y Copilot. Flags: `--agent claude\|codex\|cursor\|copilot\|all`, `--check`, `--fix`, `--remove`, `--json`. No ejecuta `braid index`, no llama al LLM y no promueve memoria. `claude-init` delega aquí por compatibilidad. |
 
 ---
 
@@ -198,6 +199,7 @@ Las siguientes reglas se aplican a cualquier agente (Claude Code, Codex CLI, Cur
 ### 8.1. Antes de responder
 
 1. **Lee el banner `[Braid] …` del primer mensaje del sistema** si aparece (lo emite el hook `SessionStart` configurado por `braid claude-init` — ADR 0009). Te dice si la memoria del repo está al día, stale, no indexada o no inicializada. Si dice "no inicializado" / "no indexado", **no consultes cognee**: pídele al usuario `braid init && braid index` antes de responder. Si dice "stale", avisa que las respuestas pueden estar desactualizadas y sugiere `braid sync`.
+   Para configurar o reparar esa integración en cualquier agente soportado, usa `braid agent-init --fix`.
 2. **Resuelve el contexto vía MCP `cognee`** (o el wrapper de Braid si está disponible) **antes** de responder a cualquier pregunta sobre código o decisiones del proyecto. No respondas de memoria sobre símbolos del repo: consulta primero.
 3. **Si el grafo no devuelve resultados con score suficiente**, dilo explícitamente. No inventes el comportamiento de funciones que no estén en el grafo. Pide al usuario que ejecute `braid index` si el banner del paso 1 lo indicaba.
 4. **Cita la fuente** cuando uses información del grafo: ruta de archivo, número de línea aproximado, o ID del ADR (`.braid/memory/decisions/NNNN-*.md`).

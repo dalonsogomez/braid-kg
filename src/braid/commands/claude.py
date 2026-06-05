@@ -212,66 +212,7 @@ def _strip_braid_hook(events: list[dict]) -> list[dict]:
 
 
 def run_init(remove: bool = False) -> int:
-    """Cablea (o elimina) el hook SessionStart + MCP server en <git_root>/.claude/settings.json."""
-    root = find_git_root()
-    if root is None:
-        sys.stderr.write("[braid claude-init] no estás dentro de un repo git\n")
-        return 1
+    """Compatibility wrapper for ADR 0009; implementation lives in agent-init."""
+    from . import agent as agent_cmd
 
-    target = _settings_path(root)
-    settings = _load_settings(target)
-    hooks = settings.setdefault("hooks", {})
-    session_start = hooks.setdefault("SessionStart", [])
-
-    if remove:
-        # Remove hook
-        if not _has_braid_hook(session_start):
-            print(f"[braid claude-init] sin hook que retirar en {target}")
-        else:
-            hooks["SessionStart"] = _strip_braid_hook(session_start)
-            if not hooks["SessionStart"]:
-                del hooks["SessionStart"]
-            if not hooks:
-                del settings["hooks"]
-            print(f"[braid claude-init] hook retirado de {target}")
-
-        # Remove MCP server
-        mcp_servers = settings.get("mcpServers", {})
-        removed_servers = [name for name in ("braid", "fairlead", "wikiforge") if name in mcp_servers]
-        for name in removed_servers:
-            del mcp_servers[name]
-            print(f"[braid claude-init] MCP server '{name}' retirado")
-        if not mcp_servers and "mcpServers" in settings:
-            del settings["mcpServers"]
-
-        if settings:
-            _save_settings(target, settings)
-        elif target.is_file():
-            target.unlink()
-        return 0
-
-    # Add hook
-    if _has_braid_hook(session_start):
-        print(f"[braid claude-init] hook ya presente en {target} — sin cambios")
-    else:
-        session_start.append(_hook_entry())
-        print(f"[braid claude-init] hook SessionStart añadido en {target}")
-        print("  comando: " + HOOK_COMMAND)
-
-    # Add MCP server
-    mcp_servers = settings.setdefault("mcpServers", {})
-    for legacy_name in ("fairlead", "wikiforge"):
-        if legacy_name in mcp_servers:
-            del mcp_servers[legacy_name]
-            print(f"[braid claude-init] MCP server legacy '{legacy_name}' retirado")
-    if "braid" not in mcp_servers:
-        mcp_servers["braid"] = {
-            "command": "braid",
-            "args": ["mcp-serve"],
-        }
-        print("[braid claude-init] MCP server 'braid' añadido")
-    else:
-        print("[braid claude-init] MCP server 'braid' ya presente — sin cambios")
-
-    _save_settings(target, settings)
-    return 0
+    return agent_cmd.run(agent="claude", remove=remove)

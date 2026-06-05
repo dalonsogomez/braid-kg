@@ -20,6 +20,7 @@
 - [ADR 0014 — DuckDB Catalog](decisions/0014-duckdb-catalog.md) — **Accepted** (2026-05-10). Usa DuckDB/DuckLake como catalog storage SQL-queryable para memoria, KG y RAG.
 - [ADR 0015 — Adopt Braid name and layout](decisions/0015-adopt-braid-name-and-layout.md) — **Accepted** (2026-06-05). Nombre canónico `braid`; layout proyecto-local bajo `.braid/`.
 - [ADR 0016 — Project boundary memory resolution](decisions/0016-project-boundary-memory-resolution.md) — **Accepted** (2026-06-05). Un padre contenedor no puede ganar sobre un proyecto hijo; legacy read-only.
+- [ADR 0017 — Universal agent init](decisions/0017-universal-agent-init.md) — **Accepted** (2026-06-05). `braid agent-init` aplica/check/fix/remove integraciones Claude, Codex, Cursor y Copilot.
 
 ## Planes activos
 
