@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..paths import config_path, find_git_root
+from ..paths import config_path, find_git_root, find_project_root
 
 
 CONFIG_TEMPLATE = """\
@@ -63,7 +63,7 @@ MEMORY_INDEX_TEMPLATE = """\
 
 
 def run(dataset: str | None = None, force: bool = False) -> int:
-    root = find_git_root() or Path.cwd().resolve()
+    root = find_project_root() or find_git_root() or Path.cwd().resolve()
     dataset = dataset or root.name
     print(f"[braid init] root={root}")
     print(f"[braid init] dataset_id={dataset}")

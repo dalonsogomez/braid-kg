@@ -31,7 +31,7 @@ Estas siete decisiones están firmes. El resto se deriva de ellas.
 
 1. **MCP-first como protocolo único de consumo.** Todo lo que un IDE necesita se expone como herramienta MCP. No hay APIs custom por IDE, no hay plugins específicos. Añadir un editor compatible MCP es una entrada en su config; nada más.
 2. **Engine preferente, no dogma.** Cognee es el engine elegido por su MCP server oficial maduro y su pipeline ECL declarativo, pero la arquitectura está diseñada para que pueda sustituirse por LlamaIndex PropertyGraphIndex (o una implementación propia) **sin rediseñar nada por encima**. Cognee acelera; no es la base de la arquitectura.
-3. **Contexto resuelto por directorio.** El proyecto activo siempre tiene prioridad sobre cualquier contexto global. Resolución estricta: `cwd -> git root -> .braid/config.toml -> legacy .kgconfig -> ~/.braid/profile/` como fallback final. Nunca se mezclan niveles por defecto.
+3. **Contexto resuelto por frontera de proyecto.** El proyecto activo siempre tiene prioridad sobre cualquier contexto global. Resolución estricta: `cwd -> proyecto real mas cercano -> .braid/config.toml -> legacy .kgconfig solo en esa frontera -> ~/.braid/profile/` como fallback final. Un directorio padre puede ser contexto Braid propio cuando se trabaja desde él, pero su estado heredado no puede ganar sobre un proyecto hijo con frontera propia. Nunca se mezclan niveles por defecto.
 4. **Memoria explícita en tres niveles.** Sesión (volátil), proyecto (persistente vinculada a la raíz Git), global personal (fallback cross-proyectos). Cada nivel tiene un dataset distinto y un store separado.
 5. **Promoción exclusivamente manual.** No existe auto-promote en ninguna dirección. La memoria solo asciende de nivel cuando el usuario lo decide con un comando explícito. Esta es **la regla de oro**: cualquier auto-promotion futura contamina los niveles superiores y degrada la calidad.
 6. **AGENTS.md como contrato único.** Un solo archivo gobierna las instrucciones para todos los IDEs. `CLAUDE.md`, `.github/copilot-instructions.md` y `.cursor/rules/main.mdc` son symlinks al `AGENTS.md`. Cuando Claude Code soporte AGENTS.md de forma nativa (issue Anthropic #6235), se eliminará el symlink correspondiente.
@@ -77,9 +77,9 @@ Estas siete decisiones están firmes. El resto se deriva de ellas.
 
 **Nivel 0 — Temporal de sesión.** Vida: una sesión de Claude Code/Codex/Cursor. Contiene estado activo (archivos abiertos, top-k chunks recuperados, plan en curso, hipótesis de depuración). Vive en el proceso de Cognee con `session_id` auto-generado. **Nunca persiste a disco a menos que el usuario lo promueva con un comando explícito.**
 
-**Nivel 1 — Persistente de proyecto.** Vida: hasta `git rm`. Contiene convenciones del repo, ADRs, glosario de dominio, resúmenes estructurales, decisiones técnicas. Vinculada a la raíz Git del proyecto. Cognee `dataset_id = <project_slug>`. Vive bajo `.braid/`: `.braid/kg/` (grafo + metadata), `.braid/rag/` (vectores), `.braid/memory/*.md` (capa humana editable y auditable) y `.braid/wiki/` (wiki generado).
+**Nivel 1 — Persistente de proyecto.** Vida: hasta `git rm` o eliminación explícita del proyecto. Contiene convenciones del repo, ADRs, glosario de dominio, resúmenes estructurales, decisiones técnicas. Vinculada a la frontera real del proyecto: raíz Git cuando existe, o marcador local como `pyproject.toml`, `requirements.txt`, `package.json`, `Dockerfile`, `.sln`, `go.mod`, `Cargo.toml` o `README.md`. Cognee `dataset_id = <project_slug>`. Vive bajo `.braid/`: `.braid/kg/` (grafo + metadata), `.braid/rag/` (vectores), `.braid/memory/*.md` (capa humana editable y auditable) y `.braid/wiki/` (wiki generado).
 
-**Nivel 2 — Persistente personal/global.** Vida: cross-proyectos. Contiene preferencias estables del usuario que aplican a cualquier repositorio: estilo de código, librerías preferidas, idioma de comentarios, patrones que rechaza. Cognee `dataset_id = "_global_profile"`. Vive en `~/.braid/profile/`. **Solo se consulta como fallback** cuando la búsqueda local devuelve score por debajo del umbral.
+**Nivel 2 — Persistente personal/global.** Vida: cross-proyectos. Contiene preferencias estables del usuario que aplican a cualquier repositorio: estilo de código, librerías preferidas, idioma de comentarios, patrones que rechaza. Cognee `dataset_id = "_global_profile"`. Su ancla semántica es `$HOME`; su almacenamiento físico vive en `~/.braid/profile/`. **Solo se consulta como fallback** cuando la búsqueda local devuelve score por debajo del umbral.
 
 ### 4.2. Reglas de promoción (no negociables)
 
@@ -98,9 +98,9 @@ Estas siete decisiones están firmes. El resto se deriva de ellas.
 
 Cada llamada del agente a `mcp__cognee__search` (o equivalente) pasa por este algoritmo:
 
-1. **`cwd`** -> subir hasta la raíz Git o hasta encontrar `.braid/config.toml`.
-2. **`.braid/config.toml`** -> si existe, su `dataset_id`, rutas y umbrales ganan sobre lo deducido.
-3. **Legacy `.kgconfig`** -> se lee solo para migración de repos antiguos; las escrituras nuevas van a `.braid/`.
+1. **`cwd`** -> identificar la frontera de proyecto real más cercana: `.git`, `pyproject.toml`, `requirements.txt`, `package.json`, `Dockerfile`, `.sln`, `go.mod`, `Cargo.toml`, `README.md` o equivalente. Un directorio padre puede ser frontera si se trabaja desde él; un hijo con marcador propio crea una frontera más cercana.
+2. **`.braid/config.toml` dentro de esa frontera** -> si existe, su `dataset_id`, rutas y umbrales ganan sobre lo deducido. El estado de un padre (por ejemplo `~/Developer/.braid`) no cruza hacia un proyecto hijo con frontera propia.
+3. **Legacy `.kgconfig` / `.kg` en esa misma frontera** -> se lee solo para migración de repos antiguos; las escrituras nuevas van a `.braid/`.
 4. **`~/.braid/profile/`** -> solo se consulta si los pasos 1-3 devuelven un top-k con score por debajo del umbral configurado (default `0.55`).
 
 Esto se implementa en un wrapper MCP custom de ~150 líneas que intercepta la llamada a Cognee y decide qué `dataset_id` consultar. Es el cerebro del sistema; sin él no hay tres niveles, hay un solo cajón global contaminado.

@@ -19,6 +19,7 @@
 - [ADR 0012 — Reranker cloud vía OpenRouter (Cohere Rerank 4 Fast)](decisions/0012-reranker-cloud-cohere-openrouter.md) — **Active** (2026-05-09). Sin descarga local, passthrough $0 en OpenRouter, multilingüe 100+, 32K context. `runner.rerank_via_openrouter` implementado. Activable via `braid eval --rerank` (requiere `OPENROUTER_API_KEY` en secrets.env). Validado por deep-research 30+ sources.
 - [ADR 0014 — DuckDB Catalog](decisions/0014-duckdb-catalog.md) — **Accepted** (2026-05-10). Usa DuckDB/DuckLake como catalog storage SQL-queryable para memoria, KG y RAG.
 - [ADR 0015 — Adopt Braid name and layout](decisions/0015-adopt-braid-name-and-layout.md) — **Accepted** (2026-06-05). Nombre canónico `braid`; layout proyecto-local bajo `.braid/`.
+- [ADR 0016 — Project boundary memory resolution](decisions/0016-project-boundary-memory-resolution.md) — **Accepted** (2026-06-05). Un padre contenedor no puede ganar sobre un proyecto hijo; legacy read-only.
 
 ## Planes activos
 

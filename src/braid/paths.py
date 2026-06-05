@@ -20,6 +20,30 @@ BRAID_HOME = Path.home() / ".braid"
 PROFILE_DIR = BRAID_HOME / "profile"
 GLOBAL_DATASET_ID = "_global_profile"
 
+PROJECT_MARKER_FILES = (
+    ".git",
+    "pyproject.toml",
+    "package.json",
+    "requirements.txt",
+    "setup.py",
+    "setup.cfg",
+    "Dockerfile",
+    "docker-compose.yml",
+    "go.mod",
+    "Cargo.toml",
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
+    "README.md",
+)
+PROJECT_MARKER_GLOBS = (
+    "*.sln",
+    "*.csproj",
+    "*.fsproj",
+    "*.xcodeproj",
+    "*.xcworkspace",
+)
+
 
 @dataclass(frozen=True)
 class ProjectContext:
@@ -32,13 +56,17 @@ class ProjectContext:
     fallback_threshold: float = 0.55
     config_path: Path | None = None
     legacy_layout: bool = False
+    state_dir: Path | None = None
+    global_profile: bool = False
 
     @property
     def braid_dir(self) -> Path:
-        return self.root / BRAID_DIRNAME
+        return self.state_dir or (self.root / BRAID_DIRNAME)
 
     @property
     def memory_dir(self) -> Path:
+        if self.global_profile:
+            return self.braid_dir
         return self.braid_dir / "memory"
 
     @property
@@ -85,15 +113,67 @@ def find_git_root(start: Path | None = None) -> Path | None:
         return None
 
 
-def find_braid_root(start: Path | None = None) -> Path | None:
-    """Walk upward looking for canonical Braid state or the legacy layout."""
+def _has_marker_file(root: Path, markers: tuple[str, ...]) -> bool:
+    for marker in markers:
+        if (root / marker).exists():
+            return True
+    return False
+
+
+def _has_marker_glob(root: Path) -> bool:
+    return any(next(root.glob(pattern), None) is not None for pattern in PROJECT_MARKER_GLOBS)
+
+
+def has_project_marker(root: Path) -> bool:
+    """Return True when root looks like a concrete project boundary."""
+
+    return _has_marker_file(root, PROJECT_MARKER_FILES) or _has_marker_glob(root)
+
+
+def _load_profile_config() -> dict:
+    profile_config = PROFILE_DIR / CONFIG_FILENAME
+    if profile_config.is_file():
+        return tomllib.loads(profile_config.read_text())
+    return {}
+
+
+def find_project_root(start: Path | None = None) -> Path | None:
+    """Walk upward looking for the nearest concrete project boundary."""
 
     cur = (start or Path.cwd()).resolve()
+    if cur.is_file():
+        cur = cur.parent
     while cur != cur.parent:
-        if config_path(cur).is_file() or project_state_dir(cur).is_dir():
+        if has_project_marker(cur):
             return cur
-        if legacy_config_path(cur).is_file() or (cur / ".kg").is_dir():
+        cur = cur.parent
+    return None
+
+
+def _has_braid_state(root: Path) -> bool:
+    if root == BRAID_HOME.parent:
+        return False
+    return config_path(root).is_file() or project_state_dir(root).is_dir()
+
+
+def _has_legacy_state(root: Path) -> bool:
+    if root == BRAID_HOME.parent:
+        return False
+    return legacy_config_path(root).is_file() or (root / ".kg").is_dir()
+
+
+def find_braid_root(start: Path | None = None) -> Path | None:
+    """Walk upward looking for Braid state within the nearest project boundary."""
+
+    cur = (start or Path.cwd()).resolve()
+    if cur.is_file():
+        cur = cur.parent
+    boundary = find_project_root(cur)
+    while cur != cur.parent:
+        if _has_braid_state(cur) or _has_legacy_state(cur):
             return cur
+        if boundary is not None and cur == boundary:
+            return None
         cur = cur.parent
     return None
 
@@ -131,7 +211,7 @@ def _context_from_root(
 
 
 def resolve_context(start: Path | None = None) -> ProjectContext:
-    """Resolve context in order: cwd, git root, Braid config, global profile."""
+    """Resolve context in order: Braid state, project boundary, git root, global profile."""
 
     start = (start or Path.cwd()).resolve()
     root = find_braid_root(start)
@@ -143,6 +223,17 @@ def resolve_context(start: Path | None = None) -> ProjectContext:
         cfg = load_kgconfig(root)
         cfg_path = legacy if legacy.is_file() else None
         return _context_from_root(root, cfg, cfg_path, legacy_layout=True)
+
+    project_root = find_project_root(start)
+    if project_root is not None:
+        return ProjectContext(
+            root=project_root,
+            dataset_id=project_root.name,
+            has_kg=False,
+            kgconfig={},
+            config_path=None,
+            legacy_layout=False,
+        )
 
     git_root = find_git_root(start)
     if git_root is not None:
@@ -156,13 +247,16 @@ def resolve_context(start: Path | None = None) -> ProjectContext:
         )
 
     profile_config = PROFILE_DIR / CONFIG_FILENAME
+    cfg = _load_profile_config()
     return ProjectContext(
-        root=PROFILE_DIR,
-        dataset_id=GLOBAL_DATASET_ID,
+        root=BRAID_HOME.parent,
+        dataset_id=cfg.get("dataset_id") or GLOBAL_DATASET_ID,
         has_kg=(PROFILE_DIR / "kg").is_dir(),
-        kgconfig={},
+        kgconfig=cfg,
         config_path=profile_config if profile_config.is_file() else None,
         legacy_layout=False,
+        state_dir=PROFILE_DIR,
+        global_profile=True,
     )
 
 

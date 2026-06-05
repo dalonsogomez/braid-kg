@@ -19,13 +19,20 @@ def _ducklake_status() -> dict | None:
 
 def run() -> int:
     ctx = resolve_context()
-    print(f"Proyecto activo: {ctx.dataset_id}")
-    print(f"  raíz:     {ctx.root}")
-    print(f"  .braid/:  {'sí' if ctx.braid_dir.is_dir() else 'no'}")
-    print(f"  kg/:      {'sí' if ctx.has_kg else 'no'}")
-    print(f"  config:   {'sí' if ctx.has_config else 'no'}")
-    if ctx.legacy_layout:
-        print("  legacy:   sí (lectura de migración)")
+    if ctx.global_profile:
+        print(f"Perfil global activo: {ctx.dataset_id}")
+        print(f"  $HOME:    {ctx.root}")
+        print(f"  storage:  {ctx.braid_dir}")
+        print(f"  kg/:      {'sí' if ctx.has_kg else 'no'}")
+        print(f"  config:   {'sí' if ctx.has_config else 'no'}")
+    else:
+        print(f"Proyecto activo: {ctx.dataset_id}")
+        print(f"  raíz:     {ctx.root}")
+        print(f"  .braid/:  {'sí' if ctx.braid_dir.is_dir() else 'no'}")
+        print(f"  kg/:      {'sí' if ctx.has_kg else 'no'}")
+        print(f"  config:   {'sí' if ctx.has_config else 'no'}")
+        if ctx.legacy_layout:
+            print("  legacy:   sí (lectura de migración)")
     decisions = ctx.memory_dir / "decisions"
     n_decisions = len(list(decisions.glob("[0-9]*-*.md"))) if decisions.is_dir() else 0
     print(f"  ADRs:     {n_decisions}")
@@ -43,8 +50,10 @@ def run() -> int:
             for name, count in top_tables:
                 print(f"    {name}: {count}")
 
-    print()
-    print(f"Perfil global ({GLOBAL_DATASET_ID}):")
-    print(f"  raíz:     {PROFILE_DIR}")
-    print(f"  existe:   {'sí' if PROFILE_DIR.is_dir() else 'no'}")
+    if not ctx.global_profile:
+        print()
+        print(f"Perfil global ({GLOBAL_DATASET_ID}):")
+        print(f"  $HOME:    {PROFILE_DIR.parent.parent}")
+        print(f"  storage:  {PROFILE_DIR}")
+        print(f"  existe:   {'sí' if PROFILE_DIR.is_dir() else 'no'}")
     return 0
